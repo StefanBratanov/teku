@@ -20,6 +20,7 @@ import tech.pegasys.teku.infrastructure.bytes.Bytes8;
 import tech.pegasys.teku.infrastructure.events.ChannelInterface;
 import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 import tech.pegasys.teku.spec.datastructures.blocks.SignedBeaconBlock;
+import tech.pegasys.teku.spec.datastructures.execution.BuilderStatus;
 import tech.pegasys.teku.spec.datastructures.execution.ExecutionPayload;
 import tech.pegasys.teku.spec.datastructures.execution.ExecutionPayloadHeader;
 import tech.pegasys.teku.spec.datastructures.execution.PowBlock;
@@ -64,6 +65,11 @@ public interface ExecutionLayerChannel extends ChannelInterface {
         }
 
         @Override
+        public SafeFuture<BuilderStatus> builderStatus() {
+          return SafeFuture.completedFuture(BuilderStatus.withOkStatus());
+        }
+
+        @Override
         public SafeFuture<ExecutionPayloadHeader> getPayloadHeader(
             final Bytes8 payloadId, final UInt64 slot) {
           return SafeFuture.completedFuture(null);
@@ -93,6 +99,8 @@ public interface ExecutionLayerChannel extends ChannelInterface {
       final TransitionConfiguration transitionConfiguration);
 
   // builder namespace
+  SafeFuture<BuilderStatus> builderStatus();
+
   SafeFuture<ExecutionPayloadHeader> getPayloadHeader(final Bytes8 payloadId, final UInt64 slot);
 
   SafeFuture<ExecutionPayload> proposeBlindedBlock(

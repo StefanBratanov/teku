@@ -39,6 +39,7 @@ import tech.pegasys.teku.spec.SpecMilestone;
 import tech.pegasys.teku.spec.SpecVersion;
 import tech.pegasys.teku.spec.config.SpecConfigBellatrix;
 import tech.pegasys.teku.spec.datastructures.blocks.SignedBeaconBlock;
+import tech.pegasys.teku.spec.datastructures.execution.BuilderStatus;
 import tech.pegasys.teku.spec.datastructures.execution.ExecutionPayload;
 import tech.pegasys.teku.spec.datastructures.execution.ExecutionPayloadHeader;
 import tech.pegasys.teku.spec.datastructures.execution.PowBlock;
@@ -254,6 +255,11 @@ public class ExecutionLayerChannelStub implements ExecutionLayerChannel {
         transitionConfiguration,
         transitionConfigurationResponse);
     return SafeFuture.completedFuture(transitionConfigurationResponse);
+  }
+
+  @Override
+  public SafeFuture<BuilderStatus> builderStatus() {
+    return SafeFuture.completedFuture(BuilderStatus.withOkStatus());
   }
 
   @Override

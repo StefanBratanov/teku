@@ -23,9 +23,12 @@ import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import tech.pegasys.teku.ethereum.executionengine.ExecutionClientProvider;
 import tech.pegasys.teku.ethereum.executionlayer.ExecutionLayerChannelImpl;
+import tech.pegasys.teku.infrastructure.async.AsyncRunner;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
+import tech.pegasys.teku.infrastructure.async.timed.RepeatingTaskScheduler;
 import tech.pegasys.teku.infrastructure.events.EventChannels;
 import tech.pegasys.teku.infrastructure.time.TimeProvider;
+import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 import tech.pegasys.teku.service.serviceutils.Service;
 import tech.pegasys.teku.service.serviceutils.ServiceConfig;
 import tech.pegasys.teku.spec.executionlayer.ExecutionLayerChannel;
@@ -36,17 +39,15 @@ public class ExecutionLayerService extends Service {
   private static final Logger LOG = LogManager.getLogger();
 
   private final EventChannels eventChannels;
-  private final ExecutionLayerConfiguration config;
-  private final MetricsSystem metricsSystem;
   private final ExecutionClientProvider engineWeb3jClientProvider;
   private final Optional<ExecutionClientProvider> builderWeb3jClientProvider;
   private final TimeProvider timeProvider;
+  private final ExecutionLayerChannel executionLayerChannel;
+  private final AsyncRunner asyncRunner;
 
   public ExecutionLayerService(
       final ServiceConfig serviceConfig, final ExecutionLayerConfiguration config) {
     this.eventChannels = serviceConfig.getEventChannels();
-    this.metricsSystem = serviceConfig.getMetricsSystem();
-    this.config = config;
     this.engineWeb3jClientProvider =
         ExecutionClientProvider.create(
             config.getEngineEndpoint(),
@@ -73,19 +74,19 @@ public class ExecutionLayerService extends Service {
     checkState(
         engineWeb3jClientProvider.isStub() == builderIsStub,
         "mixed configuration with stubbed and non-stubbed execution layer endpoints is not supported");
-    this.timeProvider = serviceConfig.getTimeProvider();
-  }
 
-  @Override
-  protected SafeFuture<?> doStart() {
+    this.timeProvider = serviceConfig.getTimeProvider();
+    this.asyncRunner = serviceConfig.createAsyncRunner("execution-layer");
+
     final String endpoint = engineWeb3jClientProvider.getEndpoint();
     LOG.info("Using execution engine at {}", endpoint);
-    final ExecutionLayerChannel executionLayerChannel;
     if (engineWeb3jClientProvider.isStub()) {
       EVENT_LOG.executionLayerStubEnabled();
-      executionLayerChannel = new ExecutionLayerChannelStub(config.getSpec(), timeProvider, true);
+      this.executionLayerChannel =
+          new ExecutionLayerChannelStub(config.getSpec(), timeProvider, true);
     } else {
-      executionLayerChannel =
+      final MetricsSystem metricsSystem = serviceConfig.getMetricsSystem();
+      this.executionLayerChannel =
           ExecutionLayerChannelImpl.create(
               engineWeb3jClientProvider.getWeb3JClient(),
               builderWeb3jClientProvider.map(ExecutionClientProvider::getWeb3JClient),
@@ -93,12 +94,23 @@ public class ExecutionLayerService extends Service {
               config.getSpec(),
               metricsSystem);
     }
+  }
+
+  @Override
+  protected SafeFuture<?> doStart() {
     eventChannels.subscribe(ExecutionLayerChannel.class, executionLayerChannel);
+    final RepeatingTaskScheduler taskScheduler =
+        new RepeatingTaskScheduler(asyncRunner, timeProvider);
+    taskScheduler.scheduleRepeatingEvent(
+        timeProvider.getTimeInSeconds(),
+        UInt64.valueOf(30),
+        (scheduledTime, actualTime) -> performBuilderHealthCheck());
     return SafeFuture.COMPLETE;
   }
 
   @Override
   protected SafeFuture<?> doStop() {
+    asyncRunner.shutdown();
     return SafeFuture.COMPLETE;
   }
 
@@ -106,5 +118,22 @@ public class ExecutionLayerService extends Service {
     return engineWeb3jClientProvider.isStub()
         ? Optional.empty()
         : Optional.of(engineWeb3jClientProvider);
+  }
+
+  private void performBuilderHealthCheck() {
+    if (builderWeb3jClientProvider.isEmpty()) {
+      return;
+    }
+    executionLayerChannel
+        .builderStatus()
+        .finish(
+            status -> {
+              if (status.hasFailed()) {
+                LOG.error(
+                    "The execution builder has failed health check: {}", status.getErrorMessage());
+              }
+            },
+            throwable ->
+                LOG.error("Error while performing the execution builder health check", throwable));
   }
 }

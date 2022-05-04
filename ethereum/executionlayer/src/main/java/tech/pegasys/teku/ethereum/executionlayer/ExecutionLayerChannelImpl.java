@@ -44,6 +44,7 @@ import tech.pegasys.teku.infrastructure.exceptions.InvalidConfigurationException
 import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 import tech.pegasys.teku.spec.Spec;
 import tech.pegasys.teku.spec.datastructures.blocks.SignedBeaconBlock;
+import tech.pegasys.teku.spec.datastructures.execution.BuilderStatus;
 import tech.pegasys.teku.spec.datastructures.execution.ExecutionPayload;
 import tech.pegasys.teku.spec.datastructures.execution.ExecutionPayloadHeader;
 import tech.pegasys.teku.spec.datastructures.execution.PowBlock;
@@ -102,9 +103,9 @@ public class ExecutionLayerChannelImpl implements ExecutionLayerChannel {
       final ExecutionEngineClient executionEngineClient,
       final Optional<ExecutionBuilderClient> executionBuilderClient,
       final Spec spec) {
-    this.spec = spec;
     this.executionEngineClient = executionEngineClient;
     this.executionBuilderClient = executionBuilderClient;
+    this.spec = spec;
   }
 
   private static <K> K unwrapResponseOrThrow(Response<K> response) {
@@ -210,6 +211,22 @@ public class ExecutionLayerChannelImpl implements ExecutionLayerChannel {
                     "exchangeTransitionConfiguration(transitionConfiguration={}) -> {}",
                     transitionConfiguration,
                     remoteTransitionConfiguration));
+  }
+
+  @Override
+  public SafeFuture<BuilderStatus> builderStatus() {
+    if (executionBuilderClient.isEmpty()) {
+      LOG.trace("Skipping calling builderStatus() because execution builder is not enabled.");
+      return SafeFuture.completedFuture(null);
+    }
+    LOG.trace("calling builderStatus()");
+    return executionBuilderClient
+        .get()
+        .status()
+        .thenApply(ExecutionLayerChannelImpl::unwrapResponseOrThrow)
+        .thenApply(___ -> BuilderStatus.withOkStatus())
+        .exceptionally(BuilderStatus::withFailedStatus)
+        .thenPeek(builderStatus -> LOG.trace("builderStatus() -> {}", builderStatus));
   }
 
   @Override
