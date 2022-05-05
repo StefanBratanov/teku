@@ -18,6 +18,7 @@ import static tech.pegasys.teku.infrastructure.logging.EventLogger.EVENT_LOG;
 import static tech.pegasys.teku.spec.config.Constants.EXECUTION_TIMEOUT;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
@@ -44,6 +45,8 @@ public class ExecutionLayerService extends Service {
   private final TimeProvider timeProvider;
   private final ExecutionLayerChannel executionLayerChannel;
   private final AsyncRunner asyncRunner;
+
+  private final AtomicBoolean builderHealthCheckFailed = new AtomicBoolean(false);
 
   public ExecutionLayerService(
       final ServiceConfig serviceConfig, final ExecutionLayerConfiguration config) {
@@ -129,11 +132,18 @@ public class ExecutionLayerService extends Service {
         .finish(
             status -> {
               if (status.hasFailed()) {
-                LOG.error(
-                    "The execution builder has failed health check: {}", status.getErrorMessage());
+                builderHealthCheckFailed.set(true);
+                LOG.warn(
+                    "The execution builder has failed health check: {}. Block production will fallback to the execution engine.",
+                    status.getErrorMessage());
+              } else {
+                if (builderHealthCheckFailed.compareAndSet(true, false)) {
+                  LOG.info(
+                      "The execution builder has recovered from a previous health check failure and it will be used to produce blocks.");
+                }
               }
             },
             throwable ->
-                LOG.error("Error while performing the execution builder health check", throwable));
+                LOG.error("Error while performing the execution builder health check.", throwable));
   }
 }
