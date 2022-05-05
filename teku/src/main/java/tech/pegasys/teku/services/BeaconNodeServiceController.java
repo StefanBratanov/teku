@@ -15,7 +15,7 @@ package tech.pegasys.teku.services;
 
 import java.util.Optional;
 import tech.pegasys.teku.config.TekuConfiguration;
-import tech.pegasys.teku.ethereum.executionengine.ExecutionClientProvider;
+import tech.pegasys.teku.ethereum.executionclient.ExecutionClientProvider;
 import tech.pegasys.teku.networking.nat.NatService;
 import tech.pegasys.teku.service.serviceutils.ServiceConfig;
 import tech.pegasys.teku.services.beaconchain.BeaconChainService;

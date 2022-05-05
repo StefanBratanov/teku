@@ -15,7 +15,7 @@ package tech.pegasys.teku.ethereum.executionlayer.client;
 
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.bytes.Bytes48;
-import tech.pegasys.teku.ethereum.executionengine.schema.Response;
+import tech.pegasys.teku.ethereum.executionclient.schema.Response;
 import tech.pegasys.teku.ethereum.executionlayer.client.schema.BlindedBeaconBlockV1;
 import tech.pegasys.teku.ethereum.executionlayer.client.schema.BuilderBidV1;
 import tech.pegasys.teku.ethereum.executionlayer.client.schema.ExecutionPayloadV1;

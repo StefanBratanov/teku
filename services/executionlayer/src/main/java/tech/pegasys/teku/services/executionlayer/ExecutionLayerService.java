@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
-import tech.pegasys.teku.ethereum.executionengine.ExecutionClientProvider;
+import tech.pegasys.teku.ethereum.executionclient.ExecutionClientProvider;
 import tech.pegasys.teku.ethereum.executionlayer.ExecutionLayerChannelImpl;
 import tech.pegasys.teku.infrastructure.async.AsyncRunner;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;

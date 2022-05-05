@@ -15,7 +15,7 @@ package tech.pegasys.teku.ethereum.executionlayer.client;
 
 import java.util.Optional;
 import org.apache.tuweni.bytes.Bytes32;
-import tech.pegasys.teku.ethereum.executionengine.schema.Response;
+import tech.pegasys.teku.ethereum.executionclient.schema.Response;
 import tech.pegasys.teku.ethereum.executionlayer.client.schema.ExecutionPayloadHeaderV1;
 import tech.pegasys.teku.ethereum.executionlayer.client.schema.ExecutionPayloadV1;
 import tech.pegasys.teku.ethereum.executionlayer.client.schema.ForkChoiceStateV1;
