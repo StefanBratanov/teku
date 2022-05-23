@@ -17,6 +17,7 @@ import static tech.pegasys.teku.infrastructure.http.HttpStatusCodes.SC_ACCEPTED;
 import static tech.pegasys.teku.infrastructure.http.HttpStatusCodes.SC_BAD_GATEWAY;
 import static tech.pegasys.teku.infrastructure.http.HttpStatusCodes.SC_BAD_REQUEST;
 import static tech.pegasys.teku.infrastructure.http.HttpStatusCodes.SC_GATEWAY_TIMEOUT;
+import static tech.pegasys.teku.infrastructure.http.HttpStatusCodes.SC_INTERNAL_SERVER_ERROR;
 import static tech.pegasys.teku.infrastructure.http.HttpStatusCodes.SC_NO_CONTENT;
 import static tech.pegasys.teku.infrastructure.http.HttpStatusCodes.SC_OK;
 import static tech.pegasys.teku.infrastructure.http.HttpStatusCodes.SC_SERVICE_UNAVAILABLE;
@@ -53,6 +54,7 @@ public class ResponseHandler<TObject> {
     withHandler(SC_SERVICE_UNAVAILABLE, this::serviceErrorHandler);
     withHandler(SC_BAD_GATEWAY, this::serviceErrorHandler);
     withHandler(SC_BAD_REQUEST, this::defaultBadRequestHandler);
+    withHandler(SC_INTERNAL_SERVER_ERROR, this::serviceErrorHandler);
     withHandler(SC_GATEWAY_TIMEOUT, this::serviceErrorHandler);
     withHandler(SC_TOO_MANY_REQUESTS, this::defaultTooManyRequestsHandler);
   }

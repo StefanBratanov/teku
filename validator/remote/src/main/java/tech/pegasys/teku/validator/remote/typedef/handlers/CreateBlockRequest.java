@@ -47,7 +47,7 @@ public class CreateBlockRequest extends AbstractTypeDefRequest {
   private DeserializableTypeDefinition<GetBlockResponse> getBlockResponseDefinition;
   private final BeaconBlockSchema beaconBlockSchema;
   private final ValidatorApiMethod apiMethod;
-  private final boolean preferSszBlockEncoding;
+  private final boolean preferSszEncoding;
 
   public CreateBlockRequest(
       final HttpUrl baseEndpoint,
@@ -55,11 +55,11 @@ public class CreateBlockRequest extends AbstractTypeDefRequest {
       final Spec spec,
       final UInt64 slot,
       final boolean blinded,
-      final boolean preferSszBlockEncoding) {
+      final boolean preferSszEncoding) {
     super(baseEndpoint, okHttpClient);
     apiMethod = blinded ? GET_UNSIGNED_BLINDED_BLOCK : GET_UNSIGNED_BLOCK_V2;
     this.slot = slot;
-    this.preferSszBlockEncoding = preferSszBlockEncoding;
+    this.preferSszEncoding = preferSszEncoding;
     this.beaconBlockSchema =
         blinded
             ? spec.atSlot(slot).getSchemaDefinitions().getBlindedBeaconBlockSchema()
@@ -87,7 +87,7 @@ public class CreateBlockRequest extends AbstractTypeDefRequest {
     final Map<String, String> headers = new HashMap<>();
     graffiti.ifPresent(bytes32 -> queryParams.put("graffiti", bytes32.toHexString()));
 
-    if (preferSszBlockEncoding) {
+    if (preferSszEncoding) {
       // application/octet-stream is preferred, but will accept application/json
       headers.put("Accept", "application/octet-stream;q=0.9, application/json;q=0.4");
     }

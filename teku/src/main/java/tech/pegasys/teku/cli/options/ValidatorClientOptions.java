@@ -13,7 +13,7 @@
 
 package tech.pegasys.teku.cli.options;
 
-import static tech.pegasys.teku.validator.api.ValidatorConfig.DEFAULT_VALIDATOR_CLIENT_SSZ_BLOCKS_ENABLED;
+import static tech.pegasys.teku.validator.api.ValidatorConfig.DEFAULT_VALIDATOR_CLIENT_SSZ_ENABLED;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -33,21 +33,21 @@ public class ValidatorClientOptions {
   private String beaconNodeApiEndpoint = ValidatorConfig.DEFAULT_BEACON_NODE_API_ENDPOINT;
 
   @Option(
-      names = {"--Xbeacon-node-ssz-blocks-enabled"},
+      names = {"--Xbeacon-node-ssz-enabled"},
       paramLabel = "<BOOLEAN>",
-      description = "Use SSZ encoding for API block requests",
+      description = "Use SSZ encoding for API requests",
       hidden = true,
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS,
       arity = "0..1",
       fallbackValue = "true")
-  private boolean validatorClientSszBlocksEnabled = DEFAULT_VALIDATOR_CLIENT_SSZ_BLOCKS_ENABLED;
+  private boolean validatorClientSszEnabled = DEFAULT_VALIDATOR_CLIENT_SSZ_ENABLED;
 
   public void configure(TekuConfiguration.Builder builder) {
     builder.validator(
         config ->
             config
                 .beaconNodeApiEndpoint(parseApiEndpoint())
-                .validatorClientUseSszBlocksEnabled(validatorClientSszBlocksEnabled));
+                .validatorClientUseSszEnabled(validatorClientSszEnabled));
   }
 
   public URI parseApiEndpoint() {

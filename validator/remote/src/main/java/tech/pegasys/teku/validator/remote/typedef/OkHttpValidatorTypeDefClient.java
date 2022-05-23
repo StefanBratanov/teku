@@ -18,14 +18,17 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import org.apache.tuweni.bytes.Bytes32;
 import tech.pegasys.teku.bls.BLSSignature;
+import tech.pegasys.teku.infrastructure.ssz.SszList;
 import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 import tech.pegasys.teku.spec.Spec;
 import tech.pegasys.teku.spec.datastructures.blocks.BeaconBlock;
 import tech.pegasys.teku.spec.datastructures.blocks.SignedBeaconBlock;
+import tech.pegasys.teku.spec.datastructures.execution.SignedValidatorRegistration;
 import tech.pegasys.teku.spec.datastructures.genesis.GenesisData;
 import tech.pegasys.teku.validator.api.SendSignedBlockResult;
 import tech.pegasys.teku.validator.remote.typedef.handlers.CreateBlockRequest;
 import tech.pegasys.teku.validator.remote.typedef.handlers.GetGenesisRequest;
+import tech.pegasys.teku.validator.remote.typedef.handlers.RegisterValidatorsRequest;
 import tech.pegasys.teku.validator.remote.typedef.handlers.SendSignedBlockRequest;
 
 public class OkHttpValidatorTypeDefClient {
@@ -34,36 +37,33 @@ public class OkHttpValidatorTypeDefClient {
   private final HttpUrl baseEndpoint;
 
   private final Spec spec;
-  private final boolean preferSszBlockEncoding;
-
-  private boolean sendBlockReceivedNotAcceptable = false;
+  private final boolean preferSszEncoding;
+  private final GetGenesisRequest getGenesisRequest;
+  private final SendSignedBlockRequest sendSignedBlockRequest;
+  private final RegisterValidatorsRequest registerValidatorsRequest;
 
   public OkHttpValidatorTypeDefClient(
       final OkHttpClient okHttpClient,
       final HttpUrl baseEndpoint,
       final Spec spec,
-      final boolean preferSszBlockEncoding) {
+      final boolean preferSszEncoding) {
     this.okHttpClient = okHttpClient;
     this.baseEndpoint = baseEndpoint;
     this.spec = spec;
-    this.preferSszBlockEncoding = preferSszBlockEncoding;
+    this.preferSszEncoding = preferSszEncoding;
+    this.getGenesisRequest = new GetGenesisRequest(okHttpClient, baseEndpoint);
+    this.sendSignedBlockRequest =
+        new SendSignedBlockRequest(baseEndpoint, okHttpClient, preferSszEncoding);
+    this.registerValidatorsRequest =
+        new RegisterValidatorsRequest(baseEndpoint, okHttpClient, preferSszEncoding);
   }
 
   public Optional<GenesisData> getGenesis() {
-    final GetGenesisRequest request = new GetGenesisRequest(okHttpClient, baseEndpoint);
-    return request.getGenesisData();
+    return getGenesisRequest.getGenesisData();
   }
 
   public SendSignedBlockResult sendSignedBlock(final SignedBeaconBlock beaconBlock) {
-    final SendSignedBlockRequest sendSignedBlockRequest =
-        new SendSignedBlockRequest(
-            baseEndpoint, okHttpClient, !sendBlockReceivedNotAcceptable && preferSszBlockEncoding);
-
-    final SendSignedBlockResult result = sendSignedBlockRequest.sendSignedBlock(beaconBlock);
-    if (sendSignedBlockRequest.isUnsupportedMediaType()) {
-      sendBlockReceivedNotAcceptable = true;
-    }
-    return result;
+    return sendSignedBlockRequest.sendSignedBlock(beaconBlock);
   }
 
   public Optional<BeaconBlock> createUnsignedBlock(
@@ -72,8 +72,12 @@ public class OkHttpValidatorTypeDefClient {
       final Optional<Bytes32> graffiti,
       final boolean blinded) {
     final CreateBlockRequest createBlockRequest =
-        new CreateBlockRequest(
-            baseEndpoint, okHttpClient, spec, slot, blinded, preferSszBlockEncoding);
+        new CreateBlockRequest(baseEndpoint, okHttpClient, spec, slot, blinded, preferSszEncoding);
     return createBlockRequest.createUnsignedBlock(randaoReveal, graffiti);
+  }
+
+  public void registerValidators(
+      final SszList<SignedValidatorRegistration> validatorRegistrations) {
+    registerValidatorsRequest.registerValidators(validatorRegistrations);
   }
 }

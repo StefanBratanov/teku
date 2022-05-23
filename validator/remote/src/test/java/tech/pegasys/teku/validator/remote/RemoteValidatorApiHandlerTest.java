@@ -53,11 +53,13 @@ import tech.pegasys.teku.bls.BLSSignature;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
 import tech.pegasys.teku.infrastructure.async.StubAsyncRunner;
 import tech.pegasys.teku.infrastructure.async.Waiter;
+import tech.pegasys.teku.infrastructure.ssz.SszList;
 import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 import tech.pegasys.teku.spec.Spec;
 import tech.pegasys.teku.spec.TestSpecFactory;
 import tech.pegasys.teku.spec.datastructures.blocks.BeaconBlock;
 import tech.pegasys.teku.spec.datastructures.blocks.SignedBeaconBlock;
+import tech.pegasys.teku.spec.datastructures.execution.SignedValidatorRegistration;
 import tech.pegasys.teku.spec.datastructures.genesis.GenesisData;
 import tech.pegasys.teku.spec.datastructures.operations.AggregateAndProof;
 import tech.pegasys.teku.spec.datastructures.operations.Attestation;
@@ -522,6 +524,18 @@ class RemoteValidatorApiHandlerTest {
 
     asyncRunner.executeQueuedActions();
     assertThatSafeFuture(result).isCompletedExceptionallyWith(RateLimitedException.class);
+  }
+
+  @Test
+  public void registerValidators_InvokeApiWithCorrectRequest() {
+    final SszList<SignedValidatorRegistration> validatorRegistrations =
+        dataStructureUtil.randomValidatorRegistrations(5);
+
+    final SafeFuture<Void> result = apiHandler.registerValidators(validatorRegistrations);
+    asyncRunner.executeQueuedActions();
+
+    assertThat(result).isCompleted();
+    verify(typeDefClient).registerValidators(validatorRegistrations);
   }
 
   private <T> Optional<T> unwrapToOptional(SafeFuture<Optional<T>> future) {

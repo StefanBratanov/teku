@@ -30,15 +30,15 @@ import tech.pegasys.teku.validator.remote.typedef.ResponseHandler;
 
 public class SendSignedBlockRequest extends AbstractTypeDefRequest {
 
-  private final boolean preferSszBlockEncoding;
+  private final boolean preferSszEncoding;
   private boolean unsupportedMediaType = false;
 
   public SendSignedBlockRequest(
       final HttpUrl baseEndpoint,
       final OkHttpClient okHttpClient,
-      final boolean preferSszBlockEncoding) {
+      final boolean preferSszEncoding) {
     super(baseEndpoint, okHttpClient);
-    this.preferSszBlockEncoding = preferSszBlockEncoding;
+    this.preferSszEncoding = preferSszEncoding;
   }
 
   public SendSignedBlockResult sendSignedBlock(SignedBeaconBlock signedBeaconBlock) {
@@ -47,7 +47,7 @@ public class SendSignedBlockRequest extends AbstractTypeDefRequest {
             ? SEND_SIGNED_BLINDED_BLOCK
             : SEND_SIGNED_BLOCK;
 
-    return preferSszBlockEncoding
+    return preferSszEncoding
         ? sendSignedBlockAsSszOrFallback(signedBeaconBlock, apiMethod)
         : sendSignedBlockAsJson(apiMethod, signedBeaconBlock);
   }
@@ -59,10 +59,6 @@ public class SendSignedBlockRequest extends AbstractTypeDefRequest {
       return sendSignedBlockAsJson(apiMethod, signedBeaconBlock);
     }
     return result;
-  }
-
-  public boolean isUnsupportedMediaType() {
-    return unsupportedMediaType;
   }
 
   private SendSignedBlockResult sendSignedBlockAsSsz(
@@ -77,12 +73,6 @@ public class SendSignedBlockRequest extends AbstractTypeDefRequest {
         .orElseGet(() -> SendSignedBlockResult.notImported("UNKNOWN"));
   }
 
-  private Optional<Object> handleUnsupportedResponse(
-      final Request request, final Response response) {
-    unsupportedMediaType = true;
-    return Optional.empty();
-  }
-
   private SendSignedBlockResult sendSignedBlockAsJson(
       final ValidatorApiMethod apiMethod, final SignedBeaconBlock signedBeaconBlock) {
     return postJson(
@@ -93,5 +83,11 @@ public class SendSignedBlockRequest extends AbstractTypeDefRequest {
             new ResponseHandler<>())
         .map(__ -> SendSignedBlockResult.success(signedBeaconBlock.getRoot()))
         .orElseGet(() -> SendSignedBlockResult.notImported("UNKNOWN"));
+  }
+
+  private Optional<Object> handleUnsupportedResponse(
+      final Request request, final Response response) {
+    unsupportedMediaType = true;
+    return Optional.empty();
   }
 }

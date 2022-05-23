@@ -104,8 +104,7 @@ public class ValidatorClientService extends Service {
     final AsyncRunner asyncRunner = services.createAsyncRunner("validator");
     final boolean generateEarlyAttestations =
         config.getValidatorConfig().generateEarlyAttestations();
-    final boolean preferSszBlockEncoding =
-        config.getValidatorConfig().isValidatorClientUseSszBlocksEnabled();
+    final boolean preferSszEncoding = config.getValidatorConfig().isValidatorClientUseSszEnabled();
     final BeaconNodeApi beaconNodeApi =
         config
             .getValidatorConfig()
@@ -118,7 +117,7 @@ public class ValidatorClientService extends Service {
                         endpoint,
                         config.getSpec(),
                         generateEarlyAttestations,
-                        preferSszBlockEncoding))
+                        preferSszEncoding))
             .orElseGet(
                 () ->
                     InProcessBeaconNodeApi.create(
