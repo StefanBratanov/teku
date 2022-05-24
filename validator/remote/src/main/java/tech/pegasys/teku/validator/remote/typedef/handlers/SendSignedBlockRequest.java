@@ -30,6 +30,10 @@ import tech.pegasys.teku.validator.remote.typedef.ResponseHandler;
 
 public class SendSignedBlockRequest extends AbstractTypeDefRequest {
 
+  private final ResponseHandler<Object> responseHandler =
+      new ResponseHandler<>()
+          .withHandler(SC_UNSUPPORTED_MEDIA_TYPE, this::handleUnsupportedResponse);
+
   private final boolean preferSszEncoding;
   private boolean unsupportedMediaType = false;
 
@@ -67,8 +71,7 @@ public class SendSignedBlockRequest extends AbstractTypeDefRequest {
             apiMethod,
             Collections.emptyMap(),
             signedBeaconBlock.sszSerialize().toArray(),
-            new ResponseHandler<>()
-                .withHandler(SC_UNSUPPORTED_MEDIA_TYPE, this::handleUnsupportedResponse))
+            responseHandler)
         .map(__ -> SendSignedBlockResult.success(signedBeaconBlock.getRoot()))
         .orElseGet(() -> SendSignedBlockResult.notImported("UNKNOWN"));
   }
@@ -80,7 +83,7 @@ public class SendSignedBlockRequest extends AbstractTypeDefRequest {
             Collections.emptyMap(),
             signedBeaconBlock,
             signedBeaconBlock.getSchema().getJsonTypeDefinition(),
-            new ResponseHandler<>())
+            responseHandler)
         .map(__ -> SendSignedBlockResult.success(signedBeaconBlock.getRoot()))
         .orElseGet(() -> SendSignedBlockResult.notImported("UNKNOWN"));
   }

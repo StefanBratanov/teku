@@ -29,8 +29,8 @@ import tech.pegasys.teku.validator.remote.typedef.ResponseHandler;
 
 public class RegisterValidatorsRequest extends AbstractTypeDefRequest {
 
-  private final ResponseHandler<String> responseHandler =
-      new ResponseHandler<String>()
+  private final ResponseHandler<Object> responseHandler =
+      new ResponseHandler<>()
           .withHandler(SC_UNSUPPORTED_MEDIA_TYPE, this::handleUnsupportedResponse);
 
   private final boolean preferSszEncoding;
@@ -82,7 +82,7 @@ public class RegisterValidatorsRequest extends AbstractTypeDefRequest {
         responseHandler);
   }
 
-  private Optional<String> handleUnsupportedResponse(
+  private Optional<Object> handleUnsupportedResponse(
       final Request request, final Response response) {
     unsupportedMediaType = true;
     return Optional.empty();

@@ -51,12 +51,12 @@ public class ResponseHandler<TObject> {
     withHandler(SC_OK, this::defaultOkHandler);
     withHandler(SC_ACCEPTED, this::noValueHandler);
     withHandler(SC_NO_CONTENT, this::noValueHandler);
-    withHandler(SC_SERVICE_UNAVAILABLE, this::serviceErrorHandler);
-    withHandler(SC_BAD_GATEWAY, this::serviceErrorHandler);
     withHandler(SC_BAD_REQUEST, this::defaultBadRequestHandler);
-    withHandler(SC_INTERNAL_SERVER_ERROR, this::serviceErrorHandler);
-    withHandler(SC_GATEWAY_TIMEOUT, this::serviceErrorHandler);
     withHandler(SC_TOO_MANY_REQUESTS, this::defaultTooManyRequestsHandler);
+    withHandler(SC_INTERNAL_SERVER_ERROR, this::serviceErrorHandler);
+    withHandler(SC_BAD_GATEWAY, this::serviceErrorHandler);
+    withHandler(SC_SERVICE_UNAVAILABLE, this::serviceErrorHandler);
+    withHandler(SC_GATEWAY_TIMEOUT, this::serviceErrorHandler);
   }
 
   public ResponseHandler(final DeserializableTypeDefinition<TObject> typeDefinition) {

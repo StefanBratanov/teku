@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import static tech.pegasys.teku.infrastructure.async.SafeFutureAssert.assertThatSafeFuture;
 import static tech.pegasys.teku.infrastructure.http.HttpStatusCodes.SC_BAD_REQUEST;
 import static tech.pegasys.teku.infrastructure.ssz.SszDataAssert.assertThatSszData;
+import static tech.pegasys.teku.spec.config.SpecConfig.FAR_FUTURE_EPOCH;
 import static tech.pegasys.teku.validator.remote.RemoteValidatorApiHandler.MAX_PUBLIC_KEY_BATCH_SIZE;
 import static tech.pegasys.teku.validator.remote.RemoteValidatorApiHandler.MAX_RATE_LIMITING_RETRIES;
 
@@ -45,9 +46,11 @@ import org.mockito.ArgumentCaptor;
 import tech.pegasys.teku.api.response.v1.beacon.PostDataFailure;
 import tech.pegasys.teku.api.response.v1.beacon.PostDataFailureResponse;
 import tech.pegasys.teku.api.response.v1.beacon.ValidatorResponse;
+import tech.pegasys.teku.api.response.v1.beacon.ValidatorStatus;
 import tech.pegasys.teku.api.response.v1.validator.GetProposerDutiesResponse;
 import tech.pegasys.teku.api.response.v1.validator.PostAttesterDutiesResponse;
 import tech.pegasys.teku.api.schema.BLSPubKey;
+import tech.pegasys.teku.api.schema.Validator;
 import tech.pegasys.teku.bls.BLSPublicKey;
 import tech.pegasys.teku.bls.BLSSignature;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
@@ -75,7 +78,6 @@ import tech.pegasys.teku.validator.api.ProposerDuty;
 import tech.pegasys.teku.validator.api.SendSignedBlockResult;
 import tech.pegasys.teku.validator.api.SubmitDataError;
 import tech.pegasys.teku.validator.remote.apiclient.RateLimitedException;
-import tech.pegasys.teku.validator.remote.apiclient.SchemaObjectsTestFixture;
 import tech.pegasys.teku.validator.remote.apiclient.ValidatorRestApiClient;
 import tech.pegasys.teku.validator.remote.typedef.OkHttpValidatorTypeDefClient;
 
@@ -83,7 +85,6 @@ class RemoteValidatorApiHandlerTest {
 
   private final Spec spec = TestSpecFactory.createMinimalPhase0();
   private final DataStructureUtil dataStructureUtil = new DataStructureUtil(spec);
-  private final SchemaObjectsTestFixture schemaObjects = new SchemaObjectsTestFixture();
   private final StubAsyncRunner asyncRunner = new StubAsyncRunner();
 
   private final ValidatorRestApiClient apiClient = mock(ValidatorRestApiClient.class);
@@ -141,11 +142,7 @@ class RemoteValidatorApiHandlerTest {
             key2.toBytesCompressed().toHexString(),
             key3.toBytesCompressed().toHexString());
     when(apiClient.getValidators(expectedValidatorIds))
-        .thenReturn(
-            Optional.of(
-                List.of(
-                    schemaObjects.validatorResponse(1, key1),
-                    schemaObjects.validatorResponse(2, key2))));
+        .thenReturn(Optional.of(List.of(validatorResponse(1, key1), validatorResponse(2, key2))));
 
     final SafeFuture<Map<BLSPublicKey, Integer>> future =
         apiHandler.getValidatorIndices(List.of(key1, key2, key3));
@@ -174,17 +171,15 @@ class RemoteValidatorApiHandlerTest {
         allSerializedKeys.subList(MAX_PUBLIC_KEY_BATCH_SIZE * 2, allKeys.size());
 
     final List<ValidatorResponse> batch1Responses =
-        List.of(
-            schemaObjects.validatorResponse(10, allKeys.get(0)),
-            schemaObjects.validatorResponse(11, allKeys.get(3)));
+        List.of(validatorResponse(10, allKeys.get(0)), validatorResponse(11, allKeys.get(3)));
     final List<ValidatorResponse> batch2Responses =
         List.of(
-            schemaObjects.validatorResponse(20, allKeys.get(MAX_PUBLIC_KEY_BATCH_SIZE)),
-            schemaObjects.validatorResponse(21, allKeys.get(MAX_PUBLIC_KEY_BATCH_SIZE + 3)));
+            validatorResponse(20, allKeys.get(MAX_PUBLIC_KEY_BATCH_SIZE)),
+            validatorResponse(21, allKeys.get(MAX_PUBLIC_KEY_BATCH_SIZE + 3)));
     final List<ValidatorResponse> batch3Responses =
         List.of(
-            schemaObjects.validatorResponse(30, allKeys.get(MAX_PUBLIC_KEY_BATCH_SIZE * 2)),
-            schemaObjects.validatorResponse(31, allKeys.get(MAX_PUBLIC_KEY_BATCH_SIZE * 2 + 3)));
+            validatorResponse(30, allKeys.get(MAX_PUBLIC_KEY_BATCH_SIZE * 2)),
+            validatorResponse(31, allKeys.get(MAX_PUBLIC_KEY_BATCH_SIZE * 2 + 3)));
 
     when(apiClient.getValidators(expectedBatch1)).thenReturn(Optional.of(batch1Responses));
     when(apiClient.getValidators(expectedBatch2)).thenReturn(Optional.of(batch2Responses));
@@ -556,5 +551,21 @@ class RemoteValidatorApiHandlerTest {
       fail("Error unwrapping value from SafeFuture", e);
       throw new RuntimeException(e);
     }
+  }
+
+  private ValidatorResponse validatorResponse(final long index, final BLSPublicKey publicKey) {
+    return new ValidatorResponse(
+        UInt64.valueOf(index),
+        dataStructureUtil.randomUInt64(),
+        ValidatorStatus.active_ongoing,
+        new Validator(
+            new BLSPubKey(publicKey),
+            dataStructureUtil.randomBytes32(),
+            dataStructureUtil.randomUInt64(),
+            false,
+            UInt64.ZERO,
+            UInt64.ZERO,
+            FAR_FUTURE_EPOCH,
+            FAR_FUTURE_EPOCH));
   }
 }
