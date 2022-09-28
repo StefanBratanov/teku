@@ -72,7 +72,7 @@ public class Constants {
   public static final Duration BUILDER_CALL_TIMEOUT = Duration.ofSeconds(8);
   // Individual durations (per method) before timeout for each builder call. They must be less than
   // or equal to BUILDER_CALL_TIMEOUT
-  public static final Duration BUILDER_STATUS_TIMEOUT = Duration.ofSeconds(1);
+  public static final Duration BUILDER_STATUS_TIMEOUT = Duration.ofSeconds(2);
   public static final Duration BUILDER_REGISTER_VALIDATOR_TIMEOUT = Duration.ofSeconds(8);
   public static final Duration BUILDER_PROPOSAL_DELAY_TOLERANCE = Duration.ofSeconds(1);
   public static final Duration BUILDER_GET_PAYLOAD_TIMEOUT = Duration.ofSeconds(3);
