@@ -112,7 +112,10 @@ public final class KZGTest {
 
   @Test
   public void testVerifyPointEvaluationPrecompile() {
+    long start = System.currentTimeMillis();
     loadTrustedSetup();
+    long end = System.currentTimeMillis();
+    System.out.println(end - start);
     final Bytes48 emptyCommitment = Bytes48.rightPad(Bytes.fromHexString("c0"));
     final KZGCommitment kzgCommitment = new KZGCommitment(emptyCommitment);
     final KZGProof kzgProof = new KZGProof(emptyCommitment);
