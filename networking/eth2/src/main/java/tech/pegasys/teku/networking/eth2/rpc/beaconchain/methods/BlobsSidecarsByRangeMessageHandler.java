@@ -13,7 +13,6 @@
 
 package tech.pegasys.teku.networking.eth2.rpc.beaconchain.methods;
 
-import static tech.pegasys.teku.networking.eth2.rpc.core.RpcResponseStatus.INVALID_REQUEST_CODE;
 import static tech.pegasys.teku.spec.config.Constants.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS;
 
 import com.google.common.base.Throwables;
@@ -77,27 +76,6 @@ public class BlobsSidecarsByRangeMessageHandler
             "Total number of sidecars requested in accepted blobs sidecars by range requests from peers");
   }
 
-  /**
-   * See <a
-   * href="https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1">BlobsSidecarsByRange
-   * v1</a>
-   */
-  @Override
-  public Optional<RpcException> validateRequest(
-      final String protocolId, final BlobsSidecarsByRangeRequestMessage request) {
-    final UInt64 requestEpoch = spec.computeEpochAtSlot(request.getStartSlot());
-    if (!verifyRequestEpochIsWithinMinEpochsForBlobsSidecars(requestEpoch)) {
-      return Optional.of(
-          new RpcException(
-              INVALID_REQUEST_CODE,
-              String.format(
-                  "The request epoch %s is not within the MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS range.",
-                  requestEpoch)));
-    }
-
-    return Optional.empty();
-  }
-
   @Override
   public void onIncomingMessage(
       final String protocolId,
@@ -133,7 +111,7 @@ public class BlobsSidecarsByRangeMessageHandler
         .thenCompose(
             earliestAvailableEpoch -> {
               final UInt64 requestEpoch = spec.computeEpochAtSlot(startSlot);
-              if (!verifyBlobsSidecarsAreAvailable(earliestAvailableEpoch, requestEpoch)) {
+              if (!checkBlobsSidecarsAreAvailable(earliestAvailableEpoch, requestEpoch)) {
                 return SafeFuture.failedFuture(
                     new ResourceUnavailableException("Blobs sidecars are not available."));
               }
@@ -143,28 +121,37 @@ public class BlobsSidecarsByRangeMessageHandler
             })
         .finish(
             requestState -> {
-              LOG.trace(
-                  "Sent {} blobs sidecars to peer {}.",
-                  requestState.sentBlobsSidecars.get(),
-                  peer.getId());
+              final int sentBlobsSidecars = requestState.sentBlobsSidecars.get();
+              LOG.trace("Sent {} blobs sidecars to peer {}.", sentBlobsSidecars, peer.getId());
               callback.completeSuccessfully();
             },
             error -> handleProcessingRequestError(error, callback));
   }
 
-  private boolean verifyRequestEpochIsWithinMinEpochsForBlobsSidecars(final UInt64 requestEpoch) {
+  /**
+   * See <a
+   * href="https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1">BlobsSidecarsByRange
+   * v1</a>
+   */
+  private boolean checkBlobsSidecarsAreAvailable(
+      final Optional<UInt64> earliestAvailableSidecarEpoch, final UInt64 requestEpoch) {
+    if (earliestAvailableSidecarEpoch.isEmpty()) {
+      return false;
+    }
+    // if request is not within the MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS range, assume sidecars
+    // are available
+    if (!checkRequestEpochIsWithinMinEpochsForBlobsSidecars(requestEpoch)) {
+      return true;
+    }
+    return earliestAvailableSidecarEpoch.get().isLessThanOrEqualTo(requestEpoch);
+  }
+
+  private boolean checkRequestEpochIsWithinMinEpochsForBlobsSidecars(final UInt64 requestEpoch) {
     final UInt64 currentEpoch = combinedChainDataClient.getCurrentEpoch();
     final UInt64 minEpoch =
         eip4844ForkEpoch.max(currentEpoch.minusMinZero(MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS));
     return requestEpoch.isGreaterThanOrEqualTo(minEpoch)
         && requestEpoch.isLessThanOrEqualTo(currentEpoch);
-  }
-
-  private boolean verifyBlobsSidecarsAreAvailable(
-      final Optional<UInt64> earliestAvailableSidecarEpoch, final UInt64 requestEpoch) {
-    return earliestAvailableSidecarEpoch
-        .map(epoch -> epoch.isLessThanOrEqualTo(requestEpoch))
-        .orElse(false);
   }
 
   private SafeFuture<RequestState> sendBlobsSidecars(final RequestState requestState) {
