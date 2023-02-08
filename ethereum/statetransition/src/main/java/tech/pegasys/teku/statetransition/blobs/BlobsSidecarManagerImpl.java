@@ -66,7 +66,7 @@ public class BlobsSidecarManagerImpl implements BlobsSidecarManager, SlotEventsC
 
   @Override
   public boolean isStorageOfBlobsSidecarRequired(final UInt64 slot) {
-    final SpecMilestone milestone = spec.getForkSchedule().getSpecMilestoneAtSlot(slot);
+    final SpecMilestone milestone = spec.atSlot(slot).getMilestone();
     if (!milestone.isGreaterThanOrEqualTo(SpecMilestone.DENEB)) {
       return false;
     }

@@ -29,6 +29,12 @@ public class RateTrackerTest {
   }
 
   @Test
+  public void shouldAllowRequestingZeroObjects() {
+    final RateTracker tracker = new RateTracker(1, 1, timeProvider);
+    assertThat(tracker.wantToRequestObjects(0)).isEqualTo(0);
+  }
+
+  @Test
   public void shouldNotUnderflowWhenTimeWindowGreaterThanCurrentTime() {
     final RateTracker tracker = new RateTracker(1, 15000, timeProvider);
     assertThat(tracker.wantToRequestObjects(1)).isEqualTo(1);
@@ -46,14 +52,14 @@ public class RateTrackerTest {
   public void shouldReturnFalseIfCacheFull() {
     final RateTracker tracker = new RateTracker(1, 1, timeProvider);
     assertThat(tracker.wantToRequestObjects(1)).isEqualTo(1);
-    assertThat(tracker.wantToRequestObjects(1)).isEqualTo(0);
+    assertThat(tracker.wantToRequestObjects(1)).isEqualTo(-1);
   }
 
   @Test
   public void shouldAddMultipleValuesToCache() throws InterruptedException {
     final RateTracker tracker = new RateTracker(10, 1, timeProvider);
     assertThat(tracker.wantToRequestObjects(10)).isEqualTo(10);
-    assertThat(tracker.wantToRequestObjects(10)).isEqualTo(0);
+    assertThat(tracker.wantToRequestObjects(10)).isEqualTo(-1);
     timeProvider.advanceTimeBySeconds(2L);
     assertThat(tracker.wantToRequestObjects(1)).isEqualTo(1);
   }
@@ -70,13 +76,13 @@ public class RateTrackerTest {
 
     timeProvider.advanceTimeBySeconds(1L);
     // time:1002 count:14 - reject.
-    assertThat(tracker.wantToRequestObjects(5)).isEqualTo(0);
+    assertThat(tracker.wantToRequestObjects(5)).isEqualTo(-1);
 
     timeProvider.advanceTimeBySeconds(1L);
     // time:1003 count:5
     assertThat(tracker.wantToRequestObjects(5)).isEqualTo(5);
     // time:1003 count:10 - reject
-    assertThat(tracker.wantToRequestObjects(5)).isEqualTo(0);
+    assertThat(tracker.wantToRequestObjects(5)).isEqualTo(-1);
 
     timeProvider.advanceTimeBySeconds(3L);
     // time:1006 count:0
@@ -86,7 +92,7 @@ public class RateTrackerTest {
     // time:1007 count:9
     assertThat(tracker.wantToRequestObjects(5)).isEqualTo(5);
     // time:1007 count:14 - reject
-    assertThat(tracker.wantToRequestObjects(1)).isEqualTo(0);
+    assertThat(tracker.wantToRequestObjects(1)).isEqualTo(-1);
 
     timeProvider.advanceTimeBySeconds(2L);
     // time:1009 count:5
@@ -94,6 +100,6 @@ public class RateTrackerTest {
     // time:1009 count:9
     assertThat(tracker.wantToRequestObjects(1)).isEqualTo(1);
     // time:1009 count:10 - reject
-    assertThat(tracker.wantToRequestObjects(1)).isEqualTo(0);
+    assertThat(tracker.wantToRequestObjects(1)).isEqualTo(-1);
   }
 }

@@ -18,12 +18,12 @@ import static tech.pegasys.teku.networking.eth2.rpc.core.RpcResponseStatus.INVAL
 import static tech.pegasys.teku.spec.config.Constants.MAX_REQUEST_BLOCKS;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes32;
@@ -344,7 +344,7 @@ class DefaultEth2Peer extends DelegatingPeer implements Eth2Peer {
 
   @Override
   public boolean wantToMakeRequest() {
-    if (requestTracker.wantToRequestObjects(1L) == 0L) {
+    if (requestTracker.wantToRequestObjects(1L) == -1L) {
       LOG.debug("Peer {} disconnected due to request rate limits", getId());
       disconnectCleanly(DisconnectReason.RATE_LIMITING).ifExceptionGetsHereRaiseABug();
       return false;
@@ -380,7 +380,7 @@ class DefaultEth2Peer extends DelegatingPeer implements Eth2Peer {
       final RateTracker requestTracker,
       final ResponseCallback<T> callback,
       final long objectCount) {
-    if (requestTracker.wantToRequestObjects(objectCount) == 0L) {
+    if (requestTracker.wantToRequestObjects(objectCount) == -1L) {
       LOG.debug("Peer {} disconnected due to {} rate limits", getId(), requestType);
       callback.completeWithErrorResponse(
           new RpcException(INVALID_REQUEST_CODE, "Peer has been rate limited"));
