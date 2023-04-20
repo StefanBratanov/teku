@@ -131,8 +131,8 @@ allprojects {
     jar.preserveFileTimestamps = false
   }
 
-  sourceCompatibility = '11'
-  targetCompatibility = '11'
+  sourceCompatibility = '17'
+  targetCompatibility = '17'
 
   repositories {
     mavenLocal()
@@ -288,14 +288,10 @@ allprojects {
     }
   }
 
-  // Normalize Xdoclint behaviour across JDKs (OpenJDK 8 is more lenient than Oracle JDK by default).
+  // Normalize Xdoclint behaviour across JDKs
   javadoc {
     options.addStringOption('Xdoclint:all', '-quiet')
-    if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
-      options.addStringOption('Xwerror', '-quiet')
-    } else {
-      options.addStringOption('Xwerror', '-html5')
-    }
+    options.addStringOption('Xwerror', '-html5')
     options.encoding = 'UTF-8'
   }
 }
@@ -500,7 +496,7 @@ tasks.register("dockerDistUntar") {
 }
 
 def dockerImage = "consensys/teku"
-def dockerJdkVariants = [ "jdk17", "jdk16", ]
+def dockerJdkVariants = [ "jdk17" ]
 def dockerBuildDir = "build/docker-teku/"
 
 task distDocker  {
