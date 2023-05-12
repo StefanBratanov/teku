@@ -138,6 +138,33 @@ class AttestationStateSelectorTest {
   }
 
   @Test
+  void shouldIgnoreAttestationsWithTargetWhichIsAlreadyJustified() {
+    chainUpdater.updateBestBlock(
+        chainUpdater.advanceChainUntil(spec.computeStartSlotAtEpoch(UInt64.ONE)));
+
+    final ChainBuilder forkBuilder = chainBuilder.fork();
+
+    final SignedBlockAndState forkBlock =
+        forkBuilder.generateBlockAtSlot(spec.computeStartSlotAtEpoch(UInt64.ONE));
+
+    chainUpdater.saveBlock(forkBlock);
+
+    // advance chain head to epoch 3 and justify epoch 2
+    chainUpdater.advanceChainUntil(spec.computeStartSlotAtEpoch(UInt64.valueOf(3)));
+    chainUpdater.justifyEpoch(2);
+
+    // Attestation slot of the fork block is before an already justified checkpoint
+    final UInt64 attestationSlot = spec.computeStartSlotAtEpoch(forkBlock.getSlot());
+    final Bytes32 blockRoot = forkBlock.getRoot();
+
+    final SafeFuture<Optional<BeaconState>> result = selectStateFor(attestationSlot, blockRoot);
+
+    final Optional<BeaconState> selectedState = safeJoin(result);
+
+    assertThat(selectedState).isEmpty();
+  }
+
+  @Test
   void shouldUseAncestorAtEarliestSlotWhenBlockIsAFork() {
     final ChainBuilder forkBuilder = chainBuilder.fork();
     // Advance chain so finalized checkpoint isn't suitable
