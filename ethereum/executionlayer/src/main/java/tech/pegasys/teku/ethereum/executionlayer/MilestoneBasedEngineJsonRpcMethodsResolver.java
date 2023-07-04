@@ -13,12 +13,9 @@
 
 package tech.pegasys.teku.ethereum.executionlayer;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Supplier;
 import tech.pegasys.teku.ethereum.executionclient.ExecutionEngineClient;
 import tech.pegasys.teku.ethereum.executionclient.methods.EngineApiMethod;
@@ -31,29 +28,22 @@ import tech.pegasys.teku.ethereum.executionclient.methods.EngineJsonRpcMethod;
 import tech.pegasys.teku.ethereum.executionclient.methods.EngineNewPayloadV1;
 import tech.pegasys.teku.ethereum.executionclient.methods.EngineNewPayloadV2;
 import tech.pegasys.teku.ethereum.executionclient.methods.EngineNewPayloadV3;
-import tech.pegasys.teku.ethereum.executionclient.methods.EthGetBlockByHash;
-import tech.pegasys.teku.ethereum.executionclient.methods.EthGetBlockByNumber;
 import tech.pegasys.teku.spec.Spec;
 import tech.pegasys.teku.spec.SpecMilestone;
 import tech.pegasys.teku.spec.datastructures.util.ForkAndSpecMilestone;
 
-public class MilestoneBasedExecutionJsonRpcMethodsResolver
-    implements ExecutionJsonRpcMethodsResolver {
+public class MilestoneBasedEngineJsonRpcMethodsResolver implements EngineJsonRpcMethodsResolver {
 
-  private final List<EngineJsonRpcMethod<?>> nonMilestoneMethods = new ArrayList<>();
-  private final Map<SpecMilestone, List<EngineJsonRpcMethod<?>>> milestoneMethods = new HashMap<>();
+  private final Map<SpecMilestone, Map<EngineApiMethod, EngineJsonRpcMethod<?>>> milestoneMethods =
+      new HashMap<>();
 
   private final Spec spec;
   private final ExecutionEngineClient executionEngineClient;
 
-  public MilestoneBasedExecutionJsonRpcMethodsResolver(
+  public MilestoneBasedEngineJsonRpcMethodsResolver(
       final Spec spec, final ExecutionEngineClient executionEngineClient) {
     this.spec = spec;
     this.executionEngineClient = executionEngineClient;
-
-    // Non-milestone specific methods
-    nonMilestoneMethods.add(new EthGetBlockByHash(executionEngineClient));
-    nonMilestoneMethods.add(new EthGetBlockByNumber(executionEngineClient));
 
     // Milestone specific methods
     spec.getEnabledMilestones().stream()
@@ -77,70 +67,59 @@ public class MilestoneBasedExecutionJsonRpcMethodsResolver
             });
   }
 
-  private List<EngineJsonRpcMethod<?>> bellatrixSupportedMethods() {
-    final List<EngineJsonRpcMethod<?>> methods = new ArrayList<>();
+  private Map<EngineApiMethod, EngineJsonRpcMethod<?>> bellatrixSupportedMethods() {
+    final Map<EngineApiMethod, EngineJsonRpcMethod<?>> methods = new HashMap<>();
 
-    methods.add(new EngineNewPayloadV1(executionEngineClient));
-    methods.add(new EngineGetPayloadV1(executionEngineClient, spec));
-    methods.add(new EngineForkChoiceUpdatedV1(executionEngineClient));
-
-    return methods;
-  }
-
-  private List<EngineJsonRpcMethod<?>> capellaSupportedMethods() {
-    final List<EngineJsonRpcMethod<?>> methods = new ArrayList<>();
-
-    methods.add(new EngineNewPayloadV2(executionEngineClient));
-    methods.add(new EngineGetPayloadV2(executionEngineClient, spec));
-    methods.add(new EngineForkChoiceUpdatedV2(executionEngineClient));
+    methods.put(EngineApiMethod.ENGINE_NEW_PAYLOAD, new EngineNewPayloadV1(executionEngineClient));
+    methods.put(
+        EngineApiMethod.ENGINE_GET_PAYLOAD, new EngineGetPayloadV1(executionEngineClient, spec));
+    methods.put(
+        EngineApiMethod.ENGINE_FORK_CHOICE_UPDATED,
+        new EngineForkChoiceUpdatedV1(executionEngineClient));
 
     return methods;
   }
 
-  private List<EngineJsonRpcMethod<?>> denebSupportedMethods() {
-    final List<EngineJsonRpcMethod<?>> methods = new ArrayList<>();
+  private Map<EngineApiMethod, EngineJsonRpcMethod<?>> capellaSupportedMethods() {
+    final Map<EngineApiMethod, EngineJsonRpcMethod<?>> methods = new HashMap<>();
 
-    methods.add(new EngineNewPayloadV3(executionEngineClient));
-    methods.add(new EngineGetPayloadV3(executionEngineClient, spec));
-    methods.add(new EngineForkChoiceUpdatedV2(executionEngineClient));
+    methods.put(EngineApiMethod.ENGINE_NEW_PAYLOAD, new EngineNewPayloadV2(executionEngineClient));
+    methods.put(
+        EngineApiMethod.ENGINE_GET_PAYLOAD, new EngineGetPayloadV2(executionEngineClient, spec));
+    methods.put(
+        EngineApiMethod.ENGINE_FORK_CHOICE_UPDATED,
+        new EngineForkChoiceUpdatedV2(executionEngineClient));
+
+    return methods;
+  }
+
+  private Map<EngineApiMethod, EngineJsonRpcMethod<?>> denebSupportedMethods() {
+    final Map<EngineApiMethod, EngineJsonRpcMethod<?>> methods = new HashMap<>();
+
+    methods.put(EngineApiMethod.ENGINE_NEW_PAYLOAD, new EngineNewPayloadV3(executionEngineClient));
+    methods.put(
+        EngineApiMethod.ENGINE_GET_PAYLOAD, new EngineGetPayloadV3(executionEngineClient, spec));
+    methods.put(
+        EngineApiMethod.ENGINE_FORK_CHOICE_UPDATED,
+        new EngineForkChoiceUpdatedV2(executionEngineClient));
 
     return methods;
   }
 
   @Override
+  @SuppressWarnings({"unchecked", "unused"})
   public <T> EngineJsonRpcMethod<T> getMethod(
-      final EngineApiMethod method, final Class<T> resultType) {
-    return findMethod(nonMilestoneMethods, method, resultType)
-        .orElseThrow(
-            () -> new IllegalArgumentException("Can't find method with name " + method.getName()));
-  }
-
-  @Override
-  public <T> EngineJsonRpcMethod<T> getMilestoneMethod(
       final EngineApiMethod method,
       final Supplier<SpecMilestone> milestoneSupplier,
       final Class<T> resultType) {
     final SpecMilestone milestone = milestoneSupplier.get();
-    final List<EngineJsonRpcMethod<?>> methods =
-        milestoneMethods.getOrDefault(milestone, Collections.emptyList());
-    return findMethod(methods, method, resultType)
-        .orElseThrow(
-            () ->
-                new IllegalArgumentException(
-                    "Can't find method with name "
-                        + method.getName()
-                        + " for milestone "
-                        + milestone));
-  }
-
-  @SuppressWarnings({"unchecked", "unused"})
-  private <T> Optional<EngineJsonRpcMethod<T>> findMethod(
-      final List<EngineJsonRpcMethod<?>> methods,
-      final EngineApiMethod method,
-      final Class<T> resultType) {
-    return methods.stream()
-        .filter(m -> m.getName().equals(method.getName()))
-        .findFirst()
-        .map(m -> (EngineJsonRpcMethod<T>) m);
+    final Map<EngineApiMethod, EngineJsonRpcMethod<?>> methods =
+        milestoneMethods.getOrDefault(milestone, Collections.emptyMap());
+    final EngineJsonRpcMethod<T> jsonRpcMethod = (EngineJsonRpcMethod<T>) methods.get(method);
+    if (jsonRpcMethod == null) {
+      throw new IllegalArgumentException(
+          "Can't find method with name " + method.getName() + " for milestone " + milestone);
+    }
+    return jsonRpcMethod;
   }
 }

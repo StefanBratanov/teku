@@ -35,13 +35,11 @@ import tech.pegasys.teku.ethereum.executionclient.methods.EngineJsonRpcMethod;
 import tech.pegasys.teku.ethereum.executionclient.methods.EngineNewPayloadV1;
 import tech.pegasys.teku.ethereum.executionclient.methods.EngineNewPayloadV2;
 import tech.pegasys.teku.ethereum.executionclient.methods.EngineNewPayloadV3;
-import tech.pegasys.teku.ethereum.executionclient.methods.EthGetBlockByHash;
-import tech.pegasys.teku.ethereum.executionclient.methods.EthGetBlockByNumber;
 import tech.pegasys.teku.spec.Spec;
 import tech.pegasys.teku.spec.SpecMilestone;
 import tech.pegasys.teku.spec.TestSpecFactory;
 
-class MilestoneBasedExecutionJsonRpcMethodsResolverTest {
+class MilestoneBasedEngineJsonRpcMethodsResolverTest {
 
   private ExecutionEngineClient executionEngineClient;
 
@@ -51,36 +49,16 @@ class MilestoneBasedExecutionJsonRpcMethodsResolverTest {
   }
 
   @ParameterizedTest
-  @MethodSource("nonMilestoneMethods")
-  void shouldProvideExpectedMethodsForNonMilestoneMethods(
-      final EngineApiMethod method, final Class<EngineJsonRpcMethod<?>> expectedMethodClass) {
-    final MilestoneBasedExecutionJsonRpcMethodsResolver methodsResolver =
-        new MilestoneBasedExecutionJsonRpcMethodsResolver(
-            TestSpecFactory.createDefault(), executionEngineClient);
-
-    final EngineJsonRpcMethod<Object> providedMethod =
-        methodsResolver.getMethod(method, Object.class);
-
-    assertThat(providedMethod).isExactlyInstanceOf(expectedMethodClass);
-  }
-
-  private static Stream<Arguments> nonMilestoneMethods() {
-    return Stream.of(
-        arguments(EngineApiMethod.ETH_GET_BLOCK_BY_HASH, EthGetBlockByHash.class),
-        arguments(EngineApiMethod.ETH_GET_BLOCK_BY_NUMBER, EthGetBlockByNumber.class));
-  }
-
-  @ParameterizedTest
   @MethodSource("bellatrixMethods")
   void shouldProvideExpectedMethodsForBellatrix(
       final EngineApiMethod method, final Class<EngineJsonRpcMethod<?>> expectedMethodClass) {
     final Spec bellatrixSpec = TestSpecFactory.createMinimalBellatrix();
 
-    final MilestoneBasedExecutionJsonRpcMethodsResolver methodsResolver =
-        new MilestoneBasedExecutionJsonRpcMethodsResolver(bellatrixSpec, executionEngineClient);
+    final MilestoneBasedEngineJsonRpcMethodsResolver engineMethodsResolver =
+        new MilestoneBasedEngineJsonRpcMethodsResolver(bellatrixSpec, executionEngineClient);
 
     final EngineJsonRpcMethod<Object> providedMethod =
-        methodsResolver.getMilestoneMethod(method, () -> SpecMilestone.BELLATRIX, Object.class);
+        engineMethodsResolver.getMethod(method, () -> SpecMilestone.BELLATRIX, Object.class);
 
     assertThat(providedMethod).isExactlyInstanceOf(expectedMethodClass);
   }
@@ -96,12 +74,12 @@ class MilestoneBasedExecutionJsonRpcMethodsResolverTest {
   void capellaMilestoneMethodIsNotSupportedInBellatrix() {
     final Spec bellatrixSpec = TestSpecFactory.createMinimalBellatrix();
 
-    final MilestoneBasedExecutionJsonRpcMethodsResolver methodsResolver =
-        new MilestoneBasedExecutionJsonRpcMethodsResolver(bellatrixSpec, executionEngineClient);
+    final MilestoneBasedEngineJsonRpcMethodsResolver engineMethodsResolver =
+        new MilestoneBasedEngineJsonRpcMethodsResolver(bellatrixSpec, executionEngineClient);
 
     assertThatThrownBy(
             () ->
-                methodsResolver.getMilestoneMethod(
+                engineMethodsResolver.getMethod(
                     EngineApiMethod.ENGINE_GET_PAYLOAD, () -> SpecMilestone.CAPELLA, Object.class))
         .hasMessage("Can't find method with name engine_getPayload for milestone CAPELLA");
   }
@@ -112,11 +90,11 @@ class MilestoneBasedExecutionJsonRpcMethodsResolverTest {
       final EngineApiMethod method, final Class<EngineJsonRpcMethod<?>> expectedMethodClass) {
     final Spec capellaSpec = TestSpecFactory.createMinimalCapella();
 
-    final MilestoneBasedExecutionJsonRpcMethodsResolver methodsResolver =
-        new MilestoneBasedExecutionJsonRpcMethodsResolver(capellaSpec, executionEngineClient);
+    final MilestoneBasedEngineJsonRpcMethodsResolver engineMethodsResolver =
+        new MilestoneBasedEngineJsonRpcMethodsResolver(capellaSpec, executionEngineClient);
 
     final EngineJsonRpcMethod<Object> providedMethod =
-        methodsResolver.getMilestoneMethod(method, () -> SpecMilestone.CAPELLA, Object.class);
+        engineMethodsResolver.getMethod(method, () -> SpecMilestone.CAPELLA, Object.class);
 
     assertThat(providedMethod).isExactlyInstanceOf(expectedMethodClass);
   }
@@ -132,12 +110,12 @@ class MilestoneBasedExecutionJsonRpcMethodsResolverTest {
   void denebMilestoneMethodIsNotSupportedInCapella() {
     final Spec capellaSpec = TestSpecFactory.createMinimalCapella();
 
-    final MilestoneBasedExecutionJsonRpcMethodsResolver methodsResolver =
-        new MilestoneBasedExecutionJsonRpcMethodsResolver(capellaSpec, executionEngineClient);
+    final MilestoneBasedEngineJsonRpcMethodsResolver engineMethodsResolver =
+        new MilestoneBasedEngineJsonRpcMethodsResolver(capellaSpec, executionEngineClient);
 
     assertThatThrownBy(
             () ->
-                methodsResolver.getMilestoneMethod(
+                engineMethodsResolver.getMethod(
                     EngineApiMethod.ENGINE_GET_PAYLOAD, () -> SpecMilestone.DENEB, Object.class))
         .hasMessage("Can't find method with name engine_getPayload for milestone DENEB");
   }
@@ -148,11 +126,11 @@ class MilestoneBasedExecutionJsonRpcMethodsResolverTest {
       EngineApiMethod method, Class<EngineJsonRpcMethod<?>> expectedMethodClass) {
     final Spec denebSpec = TestSpecFactory.createMinimalDeneb();
 
-    final MilestoneBasedExecutionJsonRpcMethodsResolver methodsResolver =
-        new MilestoneBasedExecutionJsonRpcMethodsResolver(denebSpec, executionEngineClient);
+    final MilestoneBasedEngineJsonRpcMethodsResolver engineMethodsResolver =
+        new MilestoneBasedEngineJsonRpcMethodsResolver(denebSpec, executionEngineClient);
 
     final EngineJsonRpcMethod<Object> providedMethod =
-        methodsResolver.getMilestoneMethod(method, () -> SpecMilestone.DENEB, Object.class);
+        engineMethodsResolver.getMethod(method, () -> SpecMilestone.DENEB, Object.class);
 
     assertThat(providedMethod).isExactlyInstanceOf(expectedMethodClass);
   }
