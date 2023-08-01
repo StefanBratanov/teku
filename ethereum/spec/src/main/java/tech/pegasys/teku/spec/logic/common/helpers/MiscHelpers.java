@@ -158,9 +158,13 @@ public class MiscHelpers {
   }
 
   public IntList computeCommittee(
-      BeaconState state, IntList indices, Bytes32 seed, int index, int count) {
-    int start = Math.floorDiv(indices.size() * index, count);
-    int end = Math.floorDiv(indices.size() * (index + 1), count);
+      final BeaconState state,
+      final IntList indices,
+      final Bytes32 seed,
+      final UInt64 index,
+      final int count) {
+    final int start = index.times(indices.size()).dividedBy(count).intValue();
+    final int end = index.plus(1).times(indices.size()).dividedBy(count).intValue();
     return computeCommitteeShuffle(state, indices, seed, start, end);
   }
 

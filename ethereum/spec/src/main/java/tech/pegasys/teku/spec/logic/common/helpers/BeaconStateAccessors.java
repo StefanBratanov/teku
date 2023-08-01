@@ -266,7 +266,7 @@ public abstract class BeaconStateAccessors {
     return Integer.MAX_VALUE;
   }
 
-  public IntList getBeaconCommittee(BeaconState state, UInt64 slot, UInt64 index) {
+  public IntList getBeaconCommittee(final BeaconState state, final UInt64 slot, final UInt64 index) {
     // Make sure state is within range of the slot being queried
     validateStateForCommitteeQuery(state, slot);
 
@@ -275,14 +275,11 @@ public abstract class BeaconStateAccessors {
         .get(
             TekuPair.of(slot, index),
             p -> {
-              UInt64 epoch = miscHelpers.computeEpochAtSlot(slot);
-              UInt64 committeesPerSlot = getCommitteeCountPerSlot(state, epoch);
-              int committeeIndex =
-                  slot.mod(config.getSlotsPerEpoch())
-                      .times(committeesPerSlot)
-                      .plus(index)
-                      .intValue();
-              int count = committeesPerSlot.times(config.getSlotsPerEpoch()).intValue();
+              final UInt64 epoch = miscHelpers.computeEpochAtSlot(slot);
+              final UInt64 committeesPerSlot = getCommitteeCountPerSlot(state, epoch);
+              final UInt64 committeeIndex =
+                  slot.mod(config.getSlotsPerEpoch()).times(committeesPerSlot).plus(index);
+              final int count = committeesPerSlot.times(config.getSlotsPerEpoch()).intValue();
               return miscHelpers.computeCommittee(
                   state,
                   getActiveValidatorIndices(state, epoch),
