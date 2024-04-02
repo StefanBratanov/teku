@@ -416,7 +416,6 @@ public class BeaconChainController extends Service implements BeaconChainControl
                     metricsSystem,
                     storeConfig,
                     beaconAsyncRunner,
-                    timeProvider,
                     (blockRoot) -> blockBlobSidecarsTrackersPool.getBlock(blockRoot),
                     (blockRoot, index) ->
                         blockBlobSidecarsTrackersPool.getBlobSidecar(blockRoot, index),

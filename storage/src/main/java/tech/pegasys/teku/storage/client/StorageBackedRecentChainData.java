@@ -28,7 +28,6 @@ import tech.pegasys.teku.dataproviders.lookup.SingleBlockProvider;
 import tech.pegasys.teku.dataproviders.lookup.StateAndBlockSummaryProvider;
 import tech.pegasys.teku.infrastructure.async.AsyncRunner;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
-import tech.pegasys.teku.infrastructure.time.TimeProvider;
 import tech.pegasys.teku.spec.Spec;
 import tech.pegasys.teku.spec.config.Constants;
 import tech.pegasys.teku.storage.api.ChainHeadChannel;
@@ -52,7 +51,6 @@ public class StorageBackedRecentChainData extends RecentChainData {
       final AsyncRunner asyncRunner,
       final MetricsSystem metricsSystem,
       final StoreConfig storeConfig,
-      final TimeProvider timeProvider,
       final SingleBlockProvider validatedBlockProvider,
       final SingleBlobSidecarProvider validatedBlobSidecarProvider,
       final StorageQueryChannel storageQueryChannel,
@@ -87,7 +85,6 @@ public class StorageBackedRecentChainData extends RecentChainData {
       final MetricsSystem metricsSystem,
       final StoreConfig storeConfig,
       final AsyncRunner asyncRunner,
-      final TimeProvider timeProvider,
       final SingleBlockProvider validatedBlockProvider,
       final SingleBlobSidecarProvider validatedBlobSidecarProvider,
       final StorageQueryChannel storageQueryChannel,
@@ -102,7 +99,6 @@ public class StorageBackedRecentChainData extends RecentChainData {
             asyncRunner,
             metricsSystem,
             storeConfig,
-            timeProvider,
             validatedBlockProvider,
             validatedBlobSidecarProvider,
             storageQueryChannel,
@@ -121,7 +117,6 @@ public class StorageBackedRecentChainData extends RecentChainData {
       final AsyncRunner asyncRunner,
       final MetricsSystem metricsSystem,
       final StoreConfig storeConfig,
-      final TimeProvider timeProvider,
       final SingleBlockProvider validatedBlockProvider,
       final SingleBlobSidecarProvider validatedBlobSidecarProvider,
       final StorageQueryChannel storageQueryChannel,
@@ -136,7 +131,6 @@ public class StorageBackedRecentChainData extends RecentChainData {
             asyncRunner,
             metricsSystem,
             storeConfig,
-            timeProvider,
             validatedBlockProvider,
             validatedBlobSidecarProvider,
             storageQueryChannel,

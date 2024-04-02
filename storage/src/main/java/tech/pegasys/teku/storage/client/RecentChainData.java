@@ -79,8 +79,8 @@ public abstract class RecentChainData implements StoreUpdateHandler {
   private final BlockProvider blockProvider;
   private final StateAndBlockSummaryProvider stateProvider;
   private final EarliestBlobSidecarSlotProvider earliestBlobSidecarSlotProvider;
-  protected final FinalizedCheckpointChannel finalizedCheckpointChannel;
   protected final StorageUpdateChannel storageUpdateChannel;
+  protected final FinalizedCheckpointChannel finalizedCheckpointChannel;
   protected final VoteUpdateChannel voteUpdateChannel;
   protected final AsyncRunner asyncRunner;
   protected final MetricsSystem metricsSystem;
@@ -179,6 +179,8 @@ public abstract class RecentChainData implements StoreUpdateHandler {
     // Set the head to the anchor point
     updateHead(anchorPoint.getRoot(), anchorPoint.getEpochStartSlot());
     storageUpdateChannel.onChainInitialized(anchorPoint);
+    // we consider an anchor point finalized
+    finalizedCheckpointChannel.onNewFinalizedCheckpoint(anchorPoint.getCheckpoint(), false);
   }
 
   public UInt64 getGenesisTime() {
