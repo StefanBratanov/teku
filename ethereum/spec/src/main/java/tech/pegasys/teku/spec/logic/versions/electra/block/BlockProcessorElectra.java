@@ -87,57 +87,19 @@ public class BlockProcessorElectra extends BlockProcessorDeneb {
       final BeaconBlockBody body,
       final IndexedAttestationCache indexedAttestationCache)
       throws BlockProcessingException {
-    final MutableBeaconStateElectra electraState = MutableBeaconStateElectra.required(state);
-
-    // TODO-lucas maybe we need a better way of defining the order of operations?
+    super.processOperationsNoValidation(state, body, indexedAttestationCache);
 
     safelyProcess(
-        () -> {
-          verifyOutstandingDepositsAreProcessed(state, body);
-
-          final Supplier<ValidatorExitContext> validatorExitContextSupplier =
-              beaconStateMutators.createValidatorExitContextSupplier(state);
-
-          processProposerSlashingsNoValidation(
-              state, body.getProposerSlashings(), validatorExitContextSupplier);
-          processAttesterSlashings(
-              state, body.getAttesterSlashings(), validatorExitContextSupplier);
-          processAttestationsNoVerification(state, body.getAttestations(), indexedAttestationCache);
-          processDeposits(state, body.getDeposits());
-          processVoluntaryExitsNoValidation(
-              state, body.getVoluntaryExits(), validatorExitContextSupplier);
-
-          processExecutionPayloadExits(electraState, getExecutionLayerExitsFromBlock(body));
-
-          processBlsToExecutionChangesNoValidation(
-              electraState,
-              body.getOptionalBlsToExecutionChanges()
-                  .orElseThrow(
-                      () ->
-                          new BlockProcessingException(
-                              "BlsToExecutionChanges was not found during block processing.")));
-
-          processDepositReceipts(
-              electraState,
-              body.getOptionalExecutionPayload()
-                  .flatMap(ExecutionPayload::toVersionElectra)
-                  .map(ExecutionPayloadElectra::getDepositReceipts)
-                  .orElseThrow(
-                      () ->
-                          new BlockProcessingException(
-                              "Deposit receipts were not found during block processing.")));
-        });
-  }
-
-  private static SszList<ExecutionLayerExit> getExecutionLayerExitsFromBlock(
-      final BeaconBlockBody body) throws BlockProcessingException {
-    return body.getOptionalExecutionPayload()
-        .flatMap(ExecutionPayload::toVersionElectra)
-        .map(ExecutionPayloadElectra::getExits)
-        .orElseThrow(
-            () ->
-                new BlockProcessingException(
-                    "Execution layer exits were not found during block processing."));
+        () ->
+            processDepositReceipts(
+                MutableBeaconStateElectra.required(state),
+                body.getOptionalExecutionPayload()
+                    .flatMap(ExecutionPayload::toVersionElectra)
+                    .map(ExecutionPayloadElectra::getDepositReceipts)
+                    .orElseThrow(
+                        () ->
+                            new BlockProcessingException(
+                                "Deposit receipts were not found during block processing."))));
   }
 
   @Override
@@ -165,11 +127,17 @@ public class BlockProcessorElectra extends BlockProcessorDeneb {
     }
   }
 
+  @Override
+  protected void processExecutionLayerExits(
+      final MutableBeaconState state, final Optional<ExecutionPayload> executionPayload)
+      throws BlockProcessingException {
+    processExecutionLayerExits(state, getExecutionLayerExitsFromExecutionPayload(executionPayload));
+  }
+
   /*
    Implements process_execution_layer_exit from consensus-spec (EIP-7002)
   */
-  @Override
-  public void processExecutionPayloadExits(
+  public void processExecutionLayerExits(
       final MutableBeaconState state, final SszList<ExecutionLayerExit> executionLayerExits) {
     final Supplier<ValidatorExitContext> validatorExitContextSupplier =
         beaconStateMutators.createValidatorExitContextSupplier(state);
@@ -256,5 +224,16 @@ public class BlockProcessorElectra extends BlockProcessorDeneb {
           Optional.empty(),
           false);
     }
+  }
+
+  private static SszList<ExecutionLayerExit> getExecutionLayerExitsFromExecutionPayload(
+      final Optional<ExecutionPayload> executionPayload) throws BlockProcessingException {
+    return executionPayload
+        .flatMap(ExecutionPayload::toVersionElectra)
+        .map(ExecutionPayloadElectra::getExits)
+        .orElseThrow(
+            () ->
+                new BlockProcessingException(
+                    "Execution layer exits were not found during block processing."));
   }
 }

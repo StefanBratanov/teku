@@ -46,6 +46,7 @@ import tech.pegasys.teku.spec.datastructures.blocks.BeaconBlockSummary;
 import tech.pegasys.teku.spec.datastructures.blocks.Eth1Data;
 import tech.pegasys.teku.spec.datastructures.blocks.SignedBeaconBlock;
 import tech.pegasys.teku.spec.datastructures.blocks.blockbody.BeaconBlockBody;
+import tech.pegasys.teku.spec.datastructures.execution.ExecutionPayload;
 import tech.pegasys.teku.spec.datastructures.operations.Attestation;
 import tech.pegasys.teku.spec.datastructures.operations.AttestationData;
 import tech.pegasys.teku.spec.datastructures.operations.AttesterSlashing;
@@ -440,6 +441,7 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
           processDeposits(state, body.getDeposits());
           processVoluntaryExitsNoValidation(
               state, body.getVoluntaryExits(), validatorExitContextSupplier);
+          processExecutionLayerExits(state, body.getOptionalExecutionPayload());
         });
   }
 
@@ -855,6 +857,12 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
                 validatorExitContextSupplier);
           }
         });
+  }
+
+  protected void processExecutionLayerExits(
+      final MutableBeaconState state, final Optional<ExecutionPayload> executionPayload)
+      throws BlockProcessingException {
+    // no ExecutionLayer exits until Electra
   }
 
   protected BlockValidationResult verifyVoluntaryExits(
