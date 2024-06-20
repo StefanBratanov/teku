@@ -67,6 +67,8 @@ public class NetworkConfig {
     this.networkInterface = networkInterface;
 
     this.advertisedIp = advertisedIp.filter(ip -> !ip.isBlank());
+
+    LOG.info("Configured advertised ip: {}", advertisedIp);
     this.isEnabled = isEnabled;
     if (this.advertisedIp.map(ip -> !isInetAddress(ip)).orElse(false)) {
       throw new InvalidConfigurationException(
@@ -98,7 +100,10 @@ public class NetworkConfig {
   }
 
   public String getAdvertisedIp() {
-    return resolveAnyLocalAddress(advertisedIp.orElse(networkInterface));
+    LOG.info("calling getAdvertisedIp");
+    String advertisedIp = resolveAnyLocalAddress(this.advertisedIp.orElse(networkInterface));
+    LOG.info("resolved advertisedIp: {}", advertisedIp);
+    return advertisedIp;
   }
 
   public boolean hasUserExplicitlySetAdvertisedIp() {
@@ -127,6 +132,7 @@ public class NetworkConfig {
 
   @SuppressWarnings("AddressSelection")
   private String resolveAnyLocalAddress(final String ipAddress) {
+    LOG.info("calling resolveAnyLocalAddress ({})", ipAddress);
     try {
       final InetAddress advertisedAddress = InetAddress.getByName(ipAddress);
       if (advertisedAddress.isAnyLocalAddress()) {
@@ -142,9 +148,12 @@ public class NetworkConfig {
   }
 
   private String getSiteLocalAddress() throws UnknownHostException {
+    LOG.info("calling getSiteLocalAddress");
     try {
       final InetAddress address = InetAddress.getLocalHost();
+      LOG.info("localhost: {}",address);
       if (address.isAnyLocalAddress()) {
+        LOG.info("localhost is any local address");
         return address.getHostAddress();
       }
       final Enumeration<NetworkInterface> networkInterfaces =
@@ -154,6 +163,7 @@ public class NetworkConfig {
         final Enumeration<InetAddress> inetAddresses = n.getInetAddresses();
         while (inetAddresses.hasMoreElements()) {
           InetAddress i = inetAddresses.nextElement();
+          LOG.info("Checking {}", i);
           if (i.isSiteLocalAddress()) {
             return i.getHostAddress();
           }
