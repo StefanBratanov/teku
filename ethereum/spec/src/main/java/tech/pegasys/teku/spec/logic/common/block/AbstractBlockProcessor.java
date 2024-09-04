@@ -898,6 +898,12 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
     return BlockValidationResult.SUCCESSFUL;
   }
 
+  @Override
+  public void processExecutionPayloadHeader(final MutableBeaconState state, final BeaconBlock block)
+      throws BlockProcessingException {
+    // No processExecutionPayloadHeader until EIP-7732
+  }
+
   protected void processWithdrawalRequests(
       final MutableBeaconState state,
       final BeaconBlockBody beaconBlockBody,
