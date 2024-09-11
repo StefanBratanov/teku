@@ -49,12 +49,14 @@ import tech.pegasys.teku.spec.datastructures.operations.SignedBlsToExecutionChan
 import tech.pegasys.teku.spec.datastructures.operations.SignedVoluntaryExit;
 import tech.pegasys.teku.spec.datastructures.state.beaconstate.BeaconState;
 import tech.pegasys.teku.spec.datastructures.state.beaconstate.versions.bellatrix.BeaconStateBellatrix;
+import tech.pegasys.teku.spec.datastructures.state.beaconstate.versions.eip7732.BeaconStateEip7732;
 import tech.pegasys.teku.spec.datastructures.type.SszKZGCommitment;
 import tech.pegasys.teku.spec.datastructures.util.BeaconBlockBodyLists;
 import tech.pegasys.teku.spec.datastructures.util.BlobsUtil;
 import tech.pegasys.teku.spec.logic.common.statetransition.exceptions.EpochProcessingException;
 import tech.pegasys.teku.spec.logic.common.statetransition.exceptions.SlotProcessingException;
 import tech.pegasys.teku.spec.schemas.SchemaDefinitionsBellatrix;
+import tech.pegasys.teku.spec.schemas.SchemaDefinitionsEip7732;
 import tech.pegasys.teku.spec.signatures.Signer;
 import tech.pegasys.teku.spec.util.DataStructureUtil;
 
@@ -131,6 +133,46 @@ public class BlockProposalTestUtil {
               if (builder.supportsExecutionRequests()) {
                 builder.executionRequests(dataStructureUtil.randomExecutionRequests());
               }
+              if (builder.supportsSignedExecutionPayloadHeader()) {
+                final SchemaDefinitionsEip7732 schemaDefinitionsEip7732 =
+                    SchemaDefinitionsEip7732.required(spec.atSlot(newSlot).getSchemaDefinitions());
+                final ExecutionPayload payload =
+                    executionPayload.orElseGet(
+                        () ->
+                            createExecutionPayload(
+                                newSlot, blockSlotState, transactions, terminalBlock));
+                final ExecutionPayloadHeader message =
+                    schemaDefinitionsEip7732
+                        .getExecutionPayloadHeaderSchema()
+                        .createExecutionPayloadHeader(
+                            b ->
+                                b.parentBlockHash(
+                                        () ->
+                                            BeaconStateEip7732.required(blockSlotState)
+                                                .getLatestBlockHash())
+                                    .parentBlockRoot(() -> parentBlockSigningRoot)
+                                    .blockHash(payload.getBlockHash())
+                                    .gasLimit(payload.getGasLimit())
+                                    .builderIndex(
+                                        () ->
+                                            UInt64.valueOf(
+                                                spec.getBeaconProposerIndex(
+                                                    blockSlotState, newSlot)))
+                                    .slot(() -> newSlot)
+                                    .value(() -> UInt64.ZERO)
+                                    .blobKzgCommitmentsRoot(() -> Bytes32.ZERO));
+                builder.signedExecutionPayloadHeader(
+                    schemaDefinitionsEip7732
+                        .getSignedExecutionPayloadHeaderSchema()
+                        .create(
+                            message,
+                            signer
+                                .signExecutionPayloadHeader(message, blockSlotState.getForkInfo())
+                                .join()));
+              }
+              if (builder.supportsPayloadAttestations()) {
+                builder.payloadAttestations(dataStructureUtil.emptyPayloadAttestations());
+              }
               return SafeFuture.COMPLETE;
             },
             BlockProductionPerformance.NOOP)
@@ -206,6 +248,43 @@ public class BlockProposalTestUtil {
               }
               if (builder.supportsExecutionRequests()) {
                 builder.executionRequests(dataStructureUtil.randomExecutionRequests());
+              }
+              // EIP7732 TODO:
+              if (builder.supportsSignedExecutionPayloadHeader()) {
+                final SchemaDefinitionsEip7732 schemaDefinitionsEip7732 =
+                    SchemaDefinitionsEip7732.required(spec.atSlot(newSlot).getSchemaDefinitions());
+                final ExecutionPayload payload =
+                    executionPayload.orElseGet(
+                        () -> createExecutionPayload(newSlot, state, transactions, terminalBlock));
+                final ExecutionPayloadHeader message =
+                    schemaDefinitionsEip7732
+                        .getExecutionPayloadHeaderSchema()
+                        .createExecutionPayloadHeader(
+                            b ->
+                                b.parentBlockHash(
+                                        () ->
+                                            BeaconStateEip7732.required(state).getLatestBlockHash())
+                                    .parentBlockRoot(() -> parentBlockSigningRoot)
+                                    .blockHash(payload.getBlockHash())
+                                    .gasLimit(payload.getGasLimit())
+                                    .builderIndex(
+                                        () ->
+                                            UInt64.valueOf(
+                                                spec.getBeaconProposerIndex(state, newSlot)))
+                                    .slot(() -> newSlot)
+                                    .value(() -> UInt64.ZERO)
+                                    .blobKzgCommitmentsRoot(() -> Bytes32.ZERO));
+                builder.signedExecutionPayloadHeader(
+                    schemaDefinitionsEip7732
+                        .getSignedExecutionPayloadHeaderSchema()
+                        .create(
+                            message,
+                            signer
+                                .signExecutionPayloadHeader(message, state.getForkInfo())
+                                .join()));
+              }
+              if (builder.supportsPayloadAttestations()) {
+                builder.payloadAttestations(dataStructureUtil.emptyPayloadAttestations());
               }
               return SafeFuture.COMPLETE;
             })
