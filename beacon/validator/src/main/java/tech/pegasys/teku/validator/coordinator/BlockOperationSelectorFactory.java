@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 import tech.pegasys.teku.bls.BLSSignature;
 import tech.pegasys.teku.ethereum.performance.trackers.BlockProductionPerformance;
 import tech.pegasys.teku.ethereum.performance.trackers.BlockPublishingPerformance;
@@ -47,9 +48,9 @@ import tech.pegasys.teku.spec.datastructures.execution.BuilderBidOrFallbackData;
 import tech.pegasys.teku.spec.datastructures.execution.BuilderPayloadOrFallbackData;
 import tech.pegasys.teku.spec.datastructures.execution.ExecutionPayload;
 import tech.pegasys.teku.spec.datastructures.execution.ExecutionPayloadContext;
-import tech.pegasys.teku.spec.datastructures.execution.ExecutionPayloadHeader;
 import tech.pegasys.teku.spec.datastructures.execution.ExecutionPayloadResult;
 import tech.pegasys.teku.spec.datastructures.execution.SignedExecutionPayloadHeader;
+import tech.pegasys.teku.spec.datastructures.execution.versions.eip7732.ExecutionPayloadHeaderEip7732;
 import tech.pegasys.teku.spec.datastructures.execution.versions.electra.ExecutionRequestsBuilderElectra;
 import tech.pegasys.teku.spec.datastructures.operations.Attestation;
 import tech.pegasys.teku.spec.datastructures.operations.AttesterSlashing;
@@ -58,7 +59,6 @@ import tech.pegasys.teku.spec.datastructures.operations.SignedBlsToExecutionChan
 import tech.pegasys.teku.spec.datastructures.operations.SignedVoluntaryExit;
 import tech.pegasys.teku.spec.datastructures.state.beaconstate.BeaconState;
 import tech.pegasys.teku.spec.datastructures.state.beaconstate.BeaconStateCache;
-import tech.pegasys.teku.spec.datastructures.state.beaconstate.versions.eip7732.BeaconStateEip7732;
 import tech.pegasys.teku.spec.datastructures.type.SszKZGCommitment;
 import tech.pegasys.teku.spec.datastructures.type.SszKZGProof;
 import tech.pegasys.teku.spec.executionlayer.ExecutionLayerBlockProductionManager;
@@ -85,6 +85,8 @@ public class BlockOperationSelectorFactory {
   private final OperationPool<SignedVoluntaryExit> voluntaryExitPool;
   private final OperationPool<SignedBlsToExecutionChange> blsToExecutionChangePool;
   private final SyncCommitteeContributionPool contributionPool;
+  private final ExecutionPayloadHeaderPool executionPayloadHeaderPool;
+  private final PayloadAttestationPool payloadAttestationPool;
   private final DepositProvider depositProvider;
   private final Eth1DataCache eth1DataCache;
   private final GraffitiBuilder graffitiBuilder;
@@ -99,6 +101,8 @@ public class BlockOperationSelectorFactory {
       final OperationPool<SignedVoluntaryExit> voluntaryExitPool,
       final OperationPool<SignedBlsToExecutionChange> blsToExecutionChangePool,
       final SyncCommitteeContributionPool contributionPool,
+      final ExecutionPayloadHeaderPool executionPayloadHeaderPool,
+      final PayloadAttestationPool payloadAttestationPool,
       final DepositProvider depositProvider,
       final Eth1DataCache eth1DataCache,
       final GraffitiBuilder graffitiBuilder,
@@ -111,6 +115,8 @@ public class BlockOperationSelectorFactory {
     this.voluntaryExitPool = voluntaryExitPool;
     this.blsToExecutionChangePool = blsToExecutionChangePool;
     this.contributionPool = contributionPool;
+    this.executionPayloadHeaderPool = executionPayloadHeaderPool;
+    this.payloadAttestationPool = payloadAttestationPool;
     this.depositProvider = depositProvider;
     this.eth1DataCache = eth1DataCache;
     this.graffitiBuilder = graffitiBuilder;
@@ -277,10 +283,7 @@ public class BlockOperationSelectorFactory {
 
     return SafeFuture.allOf(
         cacheExecutionPayloadValue(executionPayloadResult, blockSlotState),
-        // EIP7732 TODO: this whole flow needs drastic changes to make it work, just put a skeleton
-        // for now
-        setPayloadOrPayloadHeader(
-            bodyBuilder, executionPayloadResult, schemaDefinitions, blockSlotState, parentRoot),
+        setPayloadOrPayloadHeader(bodyBuilder, executionPayloadResult),
         setKzgCommitments(bodyBuilder, schemaDefinitions, executionPayloadResult));
   }
 
@@ -296,25 +299,13 @@ public class BlockOperationSelectorFactory {
 
   private SafeFuture<Void> setPayloadOrPayloadHeader(
       final BeaconBlockBodyBuilder bodyBuilder,
-      final ExecutionPayloadResult executionPayloadResult,
-      final SchemaDefinitionsBellatrix schemaDefinitions,
-      final BeaconState state,
-      final Bytes32 parentRoot) {
+      final ExecutionPayloadResult executionPayloadResult) {
 
     if (executionPayloadResult.isFromLocalFlow()) {
       // local, non-blinded flow
       final SafeFuture<ExecutionPayload> executionPayloadFuture =
           executionPayloadResult.getExecutionPayloadFutureFromLocalFlow().orElseThrow();
-      // ePBS
-      if (bodyBuilder.supportsSignedExecutionPayloadHeader()) {
-        return executionPayloadFuture.thenAccept(
-            executionPayload ->
-                bodyBuilder.signedExecutionPayloadHeader(
-                    createBidFromLocalExecutionPayload(
-                        schemaDefinitions, state, parentRoot, executionPayload)));
-      } else {
-        return executionPayloadFuture.thenAccept(bodyBuilder::executionPayload);
-      }
+      return executionPayloadFuture.thenAccept(bodyBuilder::executionPayload);
     }
     // builder, blinded flow
     return executionPayloadResult
@@ -325,9 +316,15 @@ public class BlockOperationSelectorFactory {
               // we should try to return unblinded content only if no explicit "blindness" has been
               // requested and builder flow fallbacks to local
               if (builderBidOrFallbackData.getFallbackData().isPresent()) {
+                final ExecutionPayload executionPayload =
+                    builderBidOrFallbackData.getFallbackDataRequired().getExecutionPayload();
+                bodyBuilder.executionPayload(executionPayload);
                 bodyBuilder.executionPayload(
                     builderBidOrFallbackData.getFallbackDataRequired().getExecutionPayload());
               } else {
+                final BuilderBid builderBid =
+                    builderBidOrFallbackData.getBuilderBid().orElseThrow();
+                bodyBuilder.executionPayloadHeader(builderBid.getHeader());
                 final ExecutionPayloadHeader executionPayloadHeader =
                     builderBidOrFallbackData
                         .getBuilderBid()
