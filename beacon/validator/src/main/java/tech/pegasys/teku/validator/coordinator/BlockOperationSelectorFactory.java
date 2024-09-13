@@ -186,23 +186,40 @@ public class BlockOperationSelectorFactory {
             blsToExecutionChangePool.getItemsForBlock(blockSlotState));
       }
 
+      // Post-ePBS: Signed Execution Payload Header
+      if (bodyBuilder.supportsSignedExecutionPayloadHeader()) {
+        final SignedExecutionPayloadHeader bid =
+            executionPayloadHeaderPool
+                .selectBidForBlock(blockSlotState, parentRoot)
+                .orElseThrow(
+                    () ->
+                        new IllegalStateException(
+                            "No bid is available for slot " + blockSlotState.getSlot()));
+        final ExecutionPayloadHeaderEip7732 header =
+            ExecutionPayloadHeaderEip7732.required(bid.getMessage());
+        // cache execution payload value
+        BeaconStateCache.getSlotCaches(blockSlotState)
+            .setBlockExecutionValue(UInt256.valueOf(header.getValue().bigIntegerValue()));
+        bodyBuilder.signedExecutionPayloadHeader(bid);
+      }
+
       // Post-ePBS: Payload attestations
       if (bodyBuilder.supportsPayloadAttestations()) {
         bodyBuilder.payloadAttestations(
             payloadAttestationPool.getPayloadAttestationsForBlock(blockSlotState));
       }
 
-      final SchemaDefinitions schemaDefinitions =
-          spec.atSlot(blockSlotState.getSlot()).getSchemaDefinitions();
-
       final SafeFuture<Void> blockProductionComplete;
 
       // In `setExecutionData` the following fields are set:
       // Post-Bellatrix: Execution Payload / Execution Payload Header
       // Post-Deneb: KZG Commitments
-      // Post-ePBS: Signed Execution Payload Header
-      if (bodyBuilder.supportsExecutionPayload()
-          || bodyBuilder.supportsSignedExecutionPayloadHeader()) {
+      // in ePBS, this section is skipped entirely because the bid is already available and local
+      // EL/builder have been called
+      if (bodyBuilder.supportsExecutionPayload()) {
+        final SchemaDefinitionsBellatrix schemaDefinitions =
+            SchemaDefinitionsBellatrix.required(
+                spec.atSlot(blockSlotState.getSlot()).getSchemaDefinitions());
         blockProductionComplete =
             forkChoiceNotifier
                 .getPayloadId(parentRoot, blockSlotState.getSlot())
@@ -212,9 +229,8 @@ public class BlockOperationSelectorFactory {
                             executionPayloadContext,
                             bodyBuilder,
                             requestedBuilderBoostFactor,
-                            SchemaDefinitionsBellatrix.required(schemaDefinitions),
+                            schemaDefinitions,
                             blockSlotState,
-                            parentRoot,
                             blockProductionPerformance));
       } else {
         blockProductionComplete = SafeFuture.COMPLETE;
@@ -232,7 +248,6 @@ public class BlockOperationSelectorFactory {
       final Optional<UInt64> requestedBuilderBoostFactor,
       final SchemaDefinitionsBellatrix schemaDefinitions,
       final BeaconState blockSlotState,
-      final Bytes32 parentRoot,
       final BlockProductionPerformance blockProductionPerformance) {
 
     if (spec.isMergeTransitionComplete(blockSlotState) && executionPayloadContext.isEmpty()) {
