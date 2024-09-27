@@ -126,7 +126,8 @@ public class ExecutionPayloadProcessorEip7732 extends AbstractExecutionPayloadPr
 
     // Verify the withdrawals root
     if (!payload
-        .getWithdrawals()
+        .getOptionalWithdrawals()
+        .orElseThrow()
         .hashTreeRoot()
         .equals(BeaconStateEip7732.required(state).getLatestWithdrawalsRoot())) {
       throw new ExecutionPayloadProcessingException(
@@ -209,13 +210,6 @@ public class ExecutionPayloadProcessorEip7732 extends AbstractExecutionPayloadPr
 
           final ExecutionPayloadEip7732 executionPayloadEip7732 =
               ExecutionPayloadEip7732.required(executionPayload);
-          // EIP7732 TODO: dirty way to leverage Electra operations
-          blockProcessorElectra.processDepositRequests(
-              state, executionPayloadEip7732.getDepositRequests());
-          blockProcessorElectra.processWithdrawalRequests(
-              state, executionPayloadEip7732.getWithdrawalRequests(), validatorExitContextSupplier);
-          blockProcessorElectra.processConsolidationRequests(
-              state, executionPayloadEip7732.getConsolidationRequests());
         });
   }
 }
