@@ -1,3 +1,5 @@
+<p align="center"><a href="https://consensys.io/teku"><img title="Teku" src='assets/teku.png' /></a></p>
+
 # teku
 
  [![Build Status](https://circleci.com/gh/Consensys/teku.svg?style=svg)](https://circleci.com/gh/Consensys/workflows/teku)
