@@ -1,4 +1,4 @@
-<p align="center"><a href="https://consensys.io/teku"><img title="Teku" src='assets/teku.png' /></a></p>
+<p align="center"><a href="https://consensys.io/teku"><img title="Teku" alt=" Teku Logo" width="500" src='assets/teku_logo.png' /></a></p>
 
 # teku
 
