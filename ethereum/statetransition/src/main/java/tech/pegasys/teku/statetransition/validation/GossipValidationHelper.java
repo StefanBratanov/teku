@@ -89,7 +89,7 @@ public class GossipValidationHelper {
     final UInt64 firstSlotInBlockEpoch =
         spec.computeStartSlotAtEpoch(spec.computeEpochAtSlot(slot));
     return parentBlockSlot.isLessThan(firstSlotInBlockEpoch)
-        ? recentChainData.retrieveStateAtSlot(
+        ? recentChainData.retrieveBlockState(
             new SlotAndBlockRoot(firstSlotInBlockEpoch, parentBlockRoot))
         : recentChainData.retrieveBlockState(parentBlockRoot);
   }
@@ -140,7 +140,7 @@ public class GossipValidationHelper {
 
   public SafeFuture<Optional<BeaconState>> getStateAtSlotAndBlockRoot(
       final SlotAndBlockRoot slotAndBlockRoot) {
-    return recentChainData.retrieveStateAtSlot(slotAndBlockRoot);
+    return recentChainData.retrieveBlockState(slotAndBlockRoot);
   }
 
   public boolean isValidatorInPayloadTimelinessCommittee(
