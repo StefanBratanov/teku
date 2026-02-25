@@ -131,7 +131,7 @@ public class MilestoneBasedEngineJsonRpcMethodsResolver implements EngineJsonRpc
 
     methods.put(ENGINE_NEW_PAYLOAD, new EngineNewPayloadV5(executionEngineClient));
     methods.put(ENGINE_GET_PAYLOAD, new EngineGetPayloadV6(executionEngineClient, spec));
-    methods.put(ENGINE_FORK_CHOICE_UPDATED, new EngineForkChoiceUpdatedV4(executionEngineClient));
+    methods.put(ENGINE_FORK_CHOICE_UPDATED, new EngineForkChoiceUpdatedV3(executionEngineClient));
 
     return methods;
   }
