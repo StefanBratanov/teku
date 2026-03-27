@@ -1264,6 +1264,7 @@ public class BeaconChainController extends Service implements BeaconChainControl
     LOG.debug("BeaconChainController.initBlockPoolsAndCaches()");
     pendingBlocks = poolFactory.createPendingPoolForBlocks(spec);
     eventChannels.subscribe(FinalizedCheckpointChannel.class, pendingBlocks);
+    eventChannels.subscribe(SlotEventsChannel.class, pendingBlocks);
     invalidBlockRoots = LimitedMap.createSynchronizedLRU(500);
   }
 
@@ -1899,8 +1900,9 @@ public class BeaconChainController extends Service implements BeaconChainControl
 
     eventChannels
         .subscribe(SlotEventsChannel.class, attestationManager)
+        .subscribe(ReceivedBlockEventsChannel.class, attestationManager)
         .subscribe(FinalizedCheckpointChannel.class, pendingAttestations)
-        .subscribe(ReceivedBlockEventsChannel.class, attestationManager);
+        .subscribe(SlotEventsChannel.class, pendingAttestations);
   }
 
   protected void initSyncCommitteePools() {
