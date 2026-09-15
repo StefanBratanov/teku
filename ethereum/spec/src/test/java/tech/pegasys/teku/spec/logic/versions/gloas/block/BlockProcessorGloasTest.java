@@ -273,8 +273,9 @@ class BlockProcessorGloasTest {
     state.setCurrentJustifiedCheckpoint(
         new Checkpoint(spec.computeEpochAtSlot(dataSlot), blockRoot));
     state.getCurrentEpochParticipation().set(0, SszByte.asUInt8(0));
+    // Deliberately different from the header slot so the test fails if the bid slot is used
     state.setLatestExecutionPayloadBid(
-        dataStructureUtil.randomExecutionPayloadBid(parentSlot, UInt64.ZERO));
+        dataStructureUtil.randomExecutionPayloadBid(dataSlot, UInt64.ZERO));
     state.setExecutionPayloadAvailability(
         schemaDefinitions
             .getExecutionPayloadAvailabilitySchema()
