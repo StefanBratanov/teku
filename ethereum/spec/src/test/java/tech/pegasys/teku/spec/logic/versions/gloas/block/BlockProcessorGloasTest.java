@@ -240,7 +240,7 @@ class BlockProcessorGloasTest {
   }
 
   @Test
-  void processAttestation_shouldUseBidParentSlotForConveniencePath() {
+  void processAttestation_shouldUseLatestBlockHeaderParentSlotForConveniencePath() {
     final MismatchedParentFixture fixture = mismatchedParentFixture();
 
     final AttestationProcessingResult result =
@@ -267,7 +267,7 @@ class BlockProcessorGloasTest {
         BeaconStateGloas.required(dataStructureUtil.randomBeaconState(stateSlot))
             .createWritableCopy();
     state.setLatestBlockHeader(
-        new BeaconBlockHeader(dataSlot, UInt64.ZERO, Bytes32.ZERO, Bytes32.ZERO, Bytes32.ZERO));
+        new BeaconBlockHeader(parentSlot, UInt64.ZERO, Bytes32.ZERO, Bytes32.ZERO, Bytes32.ZERO));
     state.getBlockRoots().setElement(parentSlot.mod(slotsPerHistoricalRoot).intValue(), blockRoot);
     state.getBlockRoots().setElement(dataSlot.mod(slotsPerHistoricalRoot).intValue(), blockRoot);
     state.setCurrentJustifiedCheckpoint(
