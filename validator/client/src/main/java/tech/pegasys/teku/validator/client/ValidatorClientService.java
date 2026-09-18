@@ -617,10 +617,10 @@ public class ValidatorClientService extends Service {
       validatorTimingChannels.add(proposerPreferencesPublisher);
     }
 
-    addValidatorCountMetric(metricsSystem, validators);
     final ValidatorStatusLogger validatorStatusLogger = new ValidatorStatusLogger(validators);
-    validatorStatusProvider.subscribeValidatorStatusesUpdates(
-        validatorStatusLogger::onUpdatedValidatorStatuses);
+    validatorTimingChannels.add(validatorStatusLogger);
+
+    addValidatorCountMetric(metricsSystem, validators);
   }
 
   public static Path getSlashingProtectionPath(final DataDirLayout dataDirLayout) {
