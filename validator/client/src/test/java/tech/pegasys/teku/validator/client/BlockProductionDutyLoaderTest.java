@@ -13,10 +13,9 @@
 
 package tech.pegasys.teku.validator.client;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static tech.pegasys.teku.infrastructure.async.SafeFutureAssert.assertThatSafeFuture;
@@ -25,7 +24,6 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.BiConsumer;
 import org.apache.tuweni.bytes.Bytes32;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +36,7 @@ import tech.pegasys.teku.spec.TestSpecFactory;
 import tech.pegasys.teku.spec.signatures.Signer;
 import tech.pegasys.teku.spec.util.DataStructureUtil;
 import tech.pegasys.teku.validator.api.ValidatorApiChannel;
+import tech.pegasys.teku.validator.api.ValidatorTimingChannel;
 import tech.pegasys.teku.validator.client.duties.BlockProductionDuty;
 import tech.pegasys.teku.validator.client.duties.Duty;
 import tech.pegasys.teku.validator.client.duties.SlotBasedScheduledDuties;
@@ -69,9 +68,8 @@ class BlockProductionDutyLoaderTest {
   private final SlotBasedScheduledDuties<BlockProductionDuty, Duty> scheduledDuties =
       mock(SlotBasedScheduledDuties.class);
 
-  @SuppressWarnings("unchecked")
-  private final BiConsumer<UInt64, ProposerDuties> publishProposerPreferences =
-      mock(BiConsumer.class);
+  private final ValidatorTimingChannel validatorTimingChannelPublisher =
+      mock(ValidatorTimingChannel.class);
 
   private final BlockProductionDutyLoader dutyLoader =
       new BlockProductionDutyLoader(
@@ -79,7 +77,7 @@ class BlockProductionDutyLoaderTest {
           __ -> scheduledDuties,
           validators,
           validatorIndexProvider,
-          publishProposerPreferences);
+          validatorTimingChannelPublisher);
 
   @BeforeEach
   void setUp() {
@@ -98,24 +96,7 @@ class BlockProductionDutyLoaderTest {
 
     verify(scheduledDuties).scheduleProduction(eq(UInt64.valueOf(9)), eq(validator1));
     verify(scheduledDuties).scheduleProduction(eq(UInt64.valueOf(10)), eq(validator2));
-    verify(publishProposerPreferences).accept(epoch, duties);
-  }
-
-  @Test
-  void shouldContinueSchedulingWhenPublishProposerPreferencesThrows() {
-    final UInt64 epoch = UInt64.valueOf(1);
-    final ProposerDuties duties = createProposerDuties(false);
-    when(validatorApiChannel.getProposerDuties(epoch, true))
-        .thenReturn(SafeFuture.completedFuture(Optional.of(duties)));
-    // Simulate a failure inside the proposer preferences callback.
-    // Block duty scheduling must still complete so the retrying loader doesn't spin on this forever
-    doThrow(new RuntimeException("boom")).when(publishProposerPreferences).accept(any(), any());
-
-    loadDuties(epoch);
-
-    verify(scheduledDuties).scheduleProduction(eq(UInt64.valueOf(9)), eq(validator1));
-    verify(scheduledDuties).scheduleProduction(eq(UInt64.valueOf(10)), eq(validator2));
-    verify(publishProposerPreferences).accept(epoch, duties);
+    verify(validatorTimingChannelPublisher, timeout(1000)).onProposerDutiesLoaded(epoch, duties);
   }
 
   @Test
@@ -129,7 +110,7 @@ class BlockProductionDutyLoaderTest {
 
     verify(scheduledDuties).scheduleProduction(eq(UInt64.valueOf(9)), eq(validator1));
     verify(scheduledDuties).scheduleProduction(eq(UInt64.valueOf(10)), eq(validator2));
-    verify(publishProposerPreferences).accept(epoch, duties);
+    verify(validatorTimingChannelPublisher, timeout(1000)).onProposerDutiesLoaded(epoch, duties);
   }
 
   private ProposerDuties createProposerDuties(final boolean executionOptimistic) {
