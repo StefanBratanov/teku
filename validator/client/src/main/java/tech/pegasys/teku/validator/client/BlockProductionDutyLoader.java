@@ -61,9 +61,7 @@ public class BlockProductionDutyLoader
   @Override
   protected SafeFuture<SlotBasedScheduledDuties<?, ?>> scheduleAllDuties(
       final UInt64 epoch, final ProposerDuties duties) {
-    // Fire on a virtual thread so subscribers never block this thread
-    Thread.ofVirtual()
-        .start(() -> validatorTimingChannelPublisher.onProposerDutiesLoaded(epoch, duties));
+    validatorTimingChannelPublisher.onProposerDutiesLoaded(epoch, duties);
     final SlotBasedScheduledDuties<BlockProductionDuty, Duty> scheduledDuties =
         scheduledDutiesFactory.apply(duties.getDependentRoot());
     duties.getDuties().forEach(duty -> scheduleDuty(scheduledDuties, duty));

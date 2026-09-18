@@ -15,7 +15,6 @@ package tech.pegasys.teku.validator.client;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static tech.pegasys.teku.infrastructure.async.SafeFutureAssert.assertThatSafeFuture;
@@ -96,7 +95,7 @@ class BlockProductionDutyLoaderTest {
 
     verify(scheduledDuties).scheduleProduction(eq(UInt64.valueOf(9)), eq(validator1));
     verify(scheduledDuties).scheduleProduction(eq(UInt64.valueOf(10)), eq(validator2));
-    verify(validatorTimingChannelPublisher, timeout(1000)).onProposerDutiesLoaded(epoch, duties);
+    verify(validatorTimingChannelPublisher).onProposerDutiesLoaded(epoch, duties);
   }
 
   @Test
@@ -110,7 +109,7 @@ class BlockProductionDutyLoaderTest {
 
     verify(scheduledDuties).scheduleProduction(eq(UInt64.valueOf(9)), eq(validator1));
     verify(scheduledDuties).scheduleProduction(eq(UInt64.valueOf(10)), eq(validator2));
-    verify(validatorTimingChannelPublisher, timeout(1000)).onProposerDutiesLoaded(epoch, duties);
+    verify(validatorTimingChannelPublisher).onProposerDutiesLoaded(epoch, duties);
   }
 
   private ProposerDuties createProposerDuties(final boolean executionOptimistic) {
