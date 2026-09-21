@@ -111,6 +111,10 @@ public class ProposerPreferencesPublisher extends AbstractPreferencesPublisher {
       final Bytes32 dependentRoot,
       final ForkInfo forkInfo,
       final ProposerPreferencesUtil preferencesUtil) {
+    final Optional<Validator> validator = ownedValidators.getValidator(duty.getPublicKey());
+    if (validator.isEmpty()) {
+      return SafeFuture.completedFuture(Optional.empty());
+    }
     final Optional<Eth1Address> maybeFeeRecipient =
         proposerConfigPropertiesProvider.getFeeRecipient(duty.getPublicKey());
     if (maybeFeeRecipient.isEmpty()) {
@@ -134,9 +138,8 @@ public class ProposerPreferencesPublisher extends AbstractPreferencesPublisher {
     }
     final ProposerPreferences preferences = maybePreferences.get();
 
-    final Validator validator = ownedValidators.getValidator(duty.getPublicKey()).orElseThrow();
-
     return validator
+        .get()
         .getSigner()
         .signProposerPreferences(preferences, forkInfo)
         .thenApply(

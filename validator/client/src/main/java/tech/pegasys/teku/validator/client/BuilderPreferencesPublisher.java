@@ -16,6 +16,7 @@ package tech.pegasys.teku.validator.client;
 import static tech.pegasys.teku.infrastructure.logging.ValidatorLogger.VALIDATOR_LOGGER;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
@@ -61,11 +62,13 @@ public class BuilderPreferencesPublisher extends AbstractPreferencesPublisher {
             .map(
                 duty -> {
                   final BLSPublicKey proposerPubkey = duty.getPublicKey();
-                  final Validator validator =
-                      ownedValidators.getValidator(proposerPubkey).orElseThrow();
-
+                  final Optional<Validator> validator =
+                      ownedValidators.getValidator(proposerPubkey);
+                  if (validator.isEmpty()) {
+                    return SafeFuture.COMPLETE;
+                  }
                   return builderConfigProvider
-                      .getBuilderConfig(validator, duty.getSlot())
+                      .getBuilderConfig(validator.get(), duty.getSlot())
                       .thenCompose(
                           maybeBuilderConfig -> {
                             if (maybeBuilderConfig.isEmpty()) {
