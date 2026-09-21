@@ -472,6 +472,7 @@ public class ValidatorClientService extends Service {
     final ValidatorDutyMetrics validatorDutyMetrics = ValidatorDutyMetrics.create(metricsSystem);
     final BuilderConfigProvider builderConfigProvider =
         new BuilderConfigProvider(spec, config.getValidatorConfig());
+    validatorTimingChannels.add(builderConfigProvider);
     final BlockDutyFactory blockDutyFactory =
         new BlockDutyFactory(
             forkProvider,
