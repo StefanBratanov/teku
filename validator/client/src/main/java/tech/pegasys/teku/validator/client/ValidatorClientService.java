@@ -609,12 +609,16 @@ public class ValidatorClientService extends Service {
           new PayloadTimelinessCommitteeDutyScheduler(metricsSystem, payloadDutyLoader, spec));
       final ProposerPreferencesPublisher proposerPreferencesPublisher =
           new ProposerPreferencesPublisher(
-              validatorApiChannel,
               validators,
+              spec,
+              validatorApiChannel,
               proposerConfigManager.orElseThrow(),
-              forkProvider,
-              spec);
+              forkProvider);
       validatorTimingChannels.add(proposerPreferencesPublisher);
+      final BuilderPreferencesPublisher builderPreferencesPublisher =
+          new BuilderPreferencesPublisher(
+              validators, spec, validatorApiChannel, builderConfigProvider);
+      validatorTimingChannels.add(builderPreferencesPublisher);
     }
 
     final ValidatorStatusLogger validatorStatusLogger = new ValidatorStatusLogger(validators);
