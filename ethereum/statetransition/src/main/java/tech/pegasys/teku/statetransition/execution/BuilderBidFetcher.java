@@ -24,6 +24,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes32;
 import tech.pegasys.teku.bls.BLSPublicKey;
 import tech.pegasys.teku.builder.rest.StakedBuilderClientProvider;
+import tech.pegasys.teku.ethereum.performance.trackers.BlockProductionPerformance;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
 import tech.pegasys.teku.infrastructure.ssz.SszList;
 import tech.pegasys.teku.infrastructure.unsigned.UInt64;
@@ -71,7 +72,8 @@ public class BuilderBidFetcher {
       final UInt64 slot,
       final BuilderConfig builderConfig,
       final Bytes32 parentHash,
-      final Bytes32 parentRoot) {
+      final Bytes32 parentRoot,
+      final BlockProductionPerformance blockProductionPerformance) {
     final SszList<BuilderEntry> configuredBuilders = builderConfig.getBuilders();
     if (configuredBuilders.isEmpty()) {
       return SafeFuture.completedFuture(Collections.emptyList());
@@ -89,13 +91,7 @@ public class BuilderBidFetcher {
                         .getExecutionPayloadBid(
                             slot, parentHash, parentRoot, proposerPubkey, builderEntry.getAuth())
                         .thenApply(
-                            maybeBid ->
-                                maybeBid
-                                    .filter(
-                                        bid ->
-                                            validateBid(
-                                                bid, state, parentHash, parentRoot, builderEntry))
-                                    .map(bid -> createRemoteBid(bid, builderEntry)))
+                            maybeBid -> maybeBid.map(bid -> createRemoteBid(bid, builderEntry)))
                         .whenComplete(
                             (maybeBid, exception) -> {
                               if (exception != null) {
@@ -121,7 +117,24 @@ public class BuilderBidFetcher {
                             }));
     // Remove empty responses and return only the successfully retrieved bids
     return SafeFuture.collectAllSuccessful(builderBids)
-        .thenApply(bids -> bids.stream().flatMap(Optional::stream).toList());
+        .alwaysRun(blockProductionPerformance::builderGetHeader)
+        .thenApply(
+            bids -> {
+              final List<RemoteBid> validatedBids =
+                  bids.stream()
+                      .flatMap(Optional::stream)
+                      .filter(
+                          bid ->
+                              validateBid(
+                                  bid.bid(),
+                                  state,
+                                  parentHash,
+                                  parentRoot,
+                                  bid.builderEntry().orElseThrow()))
+                      .toList();
+              blockProductionPerformance.builderBidValidated();
+              return validatedBids;
+            });
   }
 
   private boolean validateBid(
