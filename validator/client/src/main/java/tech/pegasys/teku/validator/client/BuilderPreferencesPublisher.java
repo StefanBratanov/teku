@@ -57,7 +57,7 @@ public class BuilderPreferencesPublisher extends AbstractPreferencesPublisher {
       final UInt64 epoch,
       final List<ProposerDuty> ownedProposerDuties,
       final Bytes32 dependentRoot) {
-    final Stream<SafeFuture<Void>> futures =
+    final Stream<SafeFuture<List<BuilderPreferencesEntry>>> builderPreferencesFutures =
         ownedProposerDuties.stream()
             .map(
                 duty -> {
@@ -65,22 +65,28 @@ public class BuilderPreferencesPublisher extends AbstractPreferencesPublisher {
                   final Optional<Validator> validator =
                       ownedValidators.getValidator(proposerPubkey);
                   if (validator.isEmpty()) {
-                    return SafeFuture.COMPLETE;
+                    return SafeFuture.completedFuture(List.of());
                   }
                   return builderConfigProvider
                       .getBuilderConfig(validator.get(), duty.getSlot())
-                      .thenCompose(
+                      .thenApply(
                           maybeBuilderConfig -> {
                             if (maybeBuilderConfig.isEmpty()) {
-                              return SafeFuture.COMPLETE;
+                              return List.of();
                             }
                             final BuilderConfig builderConfig = maybeBuilderConfig.get();
-                            final SszList<BuilderPreferencesEntry> builderPreferences =
-                                createBuilderPreferences(builderConfig, proposerPubkey);
-                            return sendBuilderPreferences(builderPreferences);
+                            return createBuilderPreferences(builderConfig, proposerPubkey);
                           });
                 });
-    SafeFuture.collectAll(futures)
+    SafeFuture.collectAll(builderPreferencesFutures)
+        .thenCompose(
+            unflattenedBuilderPreferences -> {
+              final SszList<BuilderPreferencesEntry> builderPreferences =
+                  unflattenedBuilderPreferences.stream()
+                      .flatMap(List::stream)
+                      .collect(ApiSchemas.BUILDER_PREFERENCES_ENTRIES_SCHEMA.collector());
+              return sendBuilderPreferences(builderPreferences);
+            })
         .finish(error -> VALIDATOR_LOGGER.builderPreferencesPublicationFailed(epoch, error));
   }
 
@@ -103,19 +109,16 @@ public class BuilderPreferencesPublisher extends AbstractPreferencesPublisher {
             });
   }
 
-  private SszList<BuilderPreferencesEntry> createBuilderPreferences(
+  private List<BuilderPreferencesEntry> createBuilderPreferences(
       final BuilderConfig builderConfig, final BLSPublicKey proposerPubkey) {
-    final List<BuilderPreferencesEntry> builderPreferencesEntries =
-        builderConfig.getBuilders().stream()
-            .map(
-                builder ->
-                    ApiSchemas.BUILDER_PREFERENCES_ENTRY_SCHEMA.create(
-                        proposerPubkey,
-                        builder.getUrlBytes(),
-                        builder.getAuth(),
-                        builder.getMaxExecutionPayment()))
-            .toList();
-    return ApiSchemas.BUILDER_PREFERENCES_ENTRIES_SCHEMA.createFromElements(
-        builderPreferencesEntries);
+    return builderConfig.getBuilders().stream()
+        .map(
+            builder ->
+                ApiSchemas.BUILDER_PREFERENCES_ENTRY_SCHEMA.create(
+                    proposerPubkey,
+                    builder.getUrlBytes(),
+                    builder.getAuth(),
+                    builder.getMaxExecutionPayment()))
+        .toList();
   }
 }

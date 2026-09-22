@@ -48,8 +48,10 @@ abstract class AbstractPreferencesPublisher implements ValidatorTimingChannel {
             .filter(duty -> ownedValidators.hasValidator(duty.getPublicKey()))
             .toList();
 
+    LOG.debug(
+        "Owned validators have {} proposer duties in epoch {}", ownedProposerDuties.size(), epoch);
+
     if (ownedProposerDuties.isEmpty()) {
-      LOG.debug("No owned validators have proposer duties in epoch {}", epoch);
       return;
     }
 

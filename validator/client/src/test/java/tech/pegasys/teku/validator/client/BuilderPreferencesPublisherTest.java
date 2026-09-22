@@ -15,6 +15,7 @@ package tech.pegasys.teku.validator.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -50,6 +51,8 @@ import tech.pegasys.teku.validator.client.loader.OwnedValidators;
 @TestSpecContext(milestone = {GLOAS, HEZE})
 public class BuilderPreferencesPublisherTest {
 
+  private static final int VALIDATOR_INDEX = 42;
+
   private final ValidatorApiChannel validatorApiChannel = mock(ValidatorApiChannel.class);
   private final BuilderConfigProvider builderConfigProvider = mock(BuilderConfigProvider.class);
 
@@ -77,8 +80,17 @@ public class BuilderPreferencesPublisherTest {
     return dataStructureUtil.randomBuilderConfig(1);
   }
 
+  private ProposerDuties createProposerDutiesWithOneDuty(final ProposerDuty proposerDuty) {
+    return createProposerDutiesWithMultipleDuties(List.of(proposerDuty));
+  }
+
+  private ProposerDuties createProposerDutiesWithMultipleDuties(
+      final List<ProposerDuty> proposerDuties) {
+    return new ProposerDuties(dataStructureUtil.randomBytes32(), proposerDuties, false);
+  }
+
   @TestTemplate
-  void shouldPublishWhenDutiesIncludeOurValidator(final SpecContext specContext) {
+  void shouldPublishWhenDutyIncludeOurValidator(final SpecContext specContext) {
     setUp(specContext);
     final UInt64 epoch = UInt64.valueOf(6);
     final UInt64 slot = spec.computeStartSlotAtEpoch(epoch);
@@ -87,11 +99,7 @@ public class BuilderPreferencesPublisherTest {
         .thenReturn(SafeFuture.completedFuture(Optional.of(builderConfig)));
 
     publisher.onProposerDutiesLoaded(
-        epoch,
-        new ProposerDuties(
-            dataStructureUtil.randomBytes32(),
-            List.of(new ProposerDuty(publicKey, 42, slot)),
-            false));
+        epoch, createProposerDutiesWithOneDuty(new ProposerDuty(publicKey, VALIDATOR_INDEX, slot)));
 
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<SszList<BuilderPreferencesEntry>> captor =
@@ -109,6 +117,31 @@ public class BuilderPreferencesPublisherTest {
   }
 
   @TestTemplate
+  void shouldPublishWhenMultipleDutiesIncludeOurValidator(final SpecContext specContext) {
+    setUp(specContext);
+    final UInt64 epoch = UInt64.valueOf(6);
+    final UInt64 slot = spec.computeStartSlotAtEpoch(epoch);
+    final BuilderConfig builderConfig = builderConfigWithOneEntry();
+    when(builderConfigProvider.getBuilderConfig(eq(validator), any()))
+        .thenReturn(SafeFuture.completedFuture(Optional.of(builderConfig)));
+
+    // proposer duties for the whole epoch
+    final List<ProposerDuty> proposerDuties =
+        UInt64.range(slot, spec.computeStartSlotAtEpoch(epoch.increment()))
+            .map(dutySlot -> new ProposerDuty(publicKey, VALIDATOR_INDEX, dutySlot))
+            .toList();
+    publisher.onProposerDutiesLoaded(epoch, createProposerDutiesWithMultipleDuties(proposerDuties));
+
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<SszList<BuilderPreferencesEntry>> captor =
+        ArgumentCaptor.forClass(SszList.class);
+    verify(validatorApiChannel).sendBuilderPreferences(captor.capture());
+    final SszList<BuilderPreferencesEntry> published = captor.getValue();
+    // should send all preferences in one go
+    assertThat(published).hasSize(8);
+  }
+
+  @TestTemplate
   void shouldNotPublishWhenNoDutiesForOurValidators(final SpecContext specContext) {
     setUp(specContext);
     final UInt64 epoch = UInt64.valueOf(6);
@@ -116,11 +149,7 @@ public class BuilderPreferencesPublisherTest {
     final BLSPublicKey otherKey = dataStructureUtil.randomPublicKey();
 
     publisher.onProposerDutiesLoaded(
-        epoch,
-        new ProposerDuties(
-            dataStructureUtil.randomBytes32(),
-            List.of(new ProposerDuty(otherKey, 99, slot)),
-            false));
+        epoch, createProposerDutiesWithOneDuty(new ProposerDuty(otherKey, VALIDATOR_INDEX, slot)));
 
     verify(validatorApiChannel, never()).sendBuilderPreferences(any());
   }
@@ -134,11 +163,7 @@ public class BuilderPreferencesPublisherTest {
         .thenReturn(SafeFuture.completedFuture(Optional.empty()));
 
     publisher.onProposerDutiesLoaded(
-        epoch,
-        new ProposerDuties(
-            dataStructureUtil.randomBytes32(),
-            List.of(new ProposerDuty(publicKey, 42, slot)),
-            false));
+        epoch, createProposerDutiesWithOneDuty(new ProposerDuty(publicKey, VALIDATOR_INDEX, slot)));
 
     verify(validatorApiChannel, never()).sendBuilderPreferences(any());
   }
@@ -152,11 +177,7 @@ public class BuilderPreferencesPublisherTest {
         .thenReturn(SafeFuture.completedFuture(Optional.of(BuilderConfig.NO_OP)));
 
     publisher.onProposerDutiesLoaded(
-        epoch,
-        new ProposerDuties(
-            dataStructureUtil.randomBytes32(),
-            List.of(new ProposerDuty(publicKey, 42, slot)),
-            false));
+        epoch, createProposerDutiesWithOneDuty(new ProposerDuty(publicKey, VALIDATOR_INDEX, slot)));
 
     verify(validatorApiChannel, never()).sendBuilderPreferences(any());
   }
@@ -177,10 +198,7 @@ public class BuilderPreferencesPublisherTest {
     try (LogCaptor logCaptor = LogCaptor.forClass(ValidatorLogger.class)) {
       publisher.onProposerDutiesLoaded(
           epoch,
-          new ProposerDuties(
-              dataStructureUtil.randomBytes32(),
-              List.of(new ProposerDuty(publicKey, 42, slot)),
-              false));
+          createProposerDutiesWithOneDuty(new ProposerDuty(publicKey, VALIDATOR_INDEX, slot)));
 
       assertThat(logCaptor.getErrorLogs())
           .singleElement()
