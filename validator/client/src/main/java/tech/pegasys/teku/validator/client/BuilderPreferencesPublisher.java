@@ -72,10 +72,19 @@ public class BuilderPreferencesPublisher extends AbstractPreferencesPublisher {
                       .thenApply(
                           maybeBuilderConfig -> {
                             if (maybeBuilderConfig.isEmpty()) {
-                              return List.of();
+                              return List.<BuilderPreferencesEntry>of();
                             }
                             final BuilderConfig builderConfig = maybeBuilderConfig.get();
                             return createBuilderPreferences(builderConfig, proposerPubkey);
+                          })
+                      .exceptionally(
+                          ex -> {
+                            LOG.warn(
+                                "Could not create builder preferences entry for proposerPubkey {} and slot {}",
+                                proposerPubkey,
+                                duty.getSlot(),
+                                ex);
+                            return List.of();
                           });
                 });
     SafeFuture.collectAll(builderPreferencesFutures)
