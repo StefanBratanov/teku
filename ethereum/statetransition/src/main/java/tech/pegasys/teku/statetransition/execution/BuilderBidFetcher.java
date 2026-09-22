@@ -18,6 +18,7 @@ import static tech.pegasys.teku.infrastructure.logging.Converter.gweiToEth;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -82,6 +83,10 @@ public class BuilderBidFetcher {
         spec.atSlot(slot).beaconStateAccessors().getBeaconProposerIndex(state, slot);
     final BLSPublicKey proposerPubkey =
         spec.getValidatorPubKey(state, UInt64.valueOf(proposerIndex)).orElseThrow();
+    // Tracks how many builder responses (successful or not) are still outstanding, so
+    // blockProductionPerformance.builderGetHeader() can fire as soon as the last one lands, before
+    // validation runs.
+    final AtomicInteger pendingResponses = new AtomicInteger(configuredBuilders.size());
     final Stream<SafeFuture<Optional<RemoteBid>>> builderBids =
         configuredBuilders.stream()
             .map(
@@ -90,8 +95,20 @@ public class BuilderBidFetcher {
                         .getClient(builderEntry.getUrl())
                         .getExecutionPayloadBid(
                             slot, parentHash, parentRoot, proposerPubkey, builderEntry.getAuth())
+                        .alwaysRun(
+                            () -> {
+                              if (pendingResponses.decrementAndGet() == 0) {
+                                blockProductionPerformance.builderGetHeader();
+                              }
+                            })
                         .thenApply(
-                            maybeBid -> maybeBid.map(bid -> createRemoteBid(bid, builderEntry)))
+                            maybeBid ->
+                                maybeBid
+                                    .filter(
+                                        bid ->
+                                            validateBid(
+                                                bid, state, parentHash, parentRoot, builderEntry))
+                                    .map(bid -> createRemoteBid(bid, builderEntry)))
                         .whenComplete(
                             (maybeBid, exception) -> {
                               if (exception != null) {
@@ -115,23 +132,11 @@ public class BuilderBidFetcher {
                                           builderEntry.getUrl(),
                                           slot));
                             }));
-    // Remove empty responses and return only the successfully retrieved bids
     return SafeFuture.collectAllSuccessful(builderBids)
-        .alwaysRun(blockProductionPerformance::builderGetHeader)
         .thenApply(
             bids -> {
               final List<RemoteBid> validatedBids =
-                  bids.stream()
-                      .flatMap(Optional::stream)
-                      .filter(
-                          bid ->
-                              validateBid(
-                                  bid.bid(),
-                                  state,
-                                  parentHash,
-                                  parentRoot,
-                                  bid.builderEntry().orElseThrow()))
-                      .toList();
+                  bids.stream().flatMap(Optional::stream).toList();
               blockProductionPerformance.builderBidValidated();
               return validatedBids;
             });
