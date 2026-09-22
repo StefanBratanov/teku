@@ -91,10 +91,8 @@ public class BuilderBidFetcher {
         configuredBuilders.stream()
             .map(
                 builderEntry ->
-                    SafeFuture.of(
-                            () ->
-                                getExecutionPayloadBid(
-                                    slot, parentHash, parentRoot, proposerPubkey, builderEntry))
+                    getExecutionPayloadBid(
+                            slot, parentHash, parentRoot, proposerPubkey, builderEntry)
                         .alwaysRun(
                             () -> {
                               if (pendingResponses.decrementAndGet() == 0) {
@@ -148,10 +146,12 @@ public class BuilderBidFetcher {
       final Bytes32 parentRoot,
       final BLSPublicKey proposerPubkey,
       final BuilderEntry builderEntry) {
-    return stakedBuilderClientProvider
-        .getClient(builderEntry.getUrl())
-        .getExecutionPayloadBid(
-            slot, parentHash, parentRoot, proposerPubkey, builderEntry.getAuth());
+    return SafeFuture.of(
+        () ->
+            stakedBuilderClientProvider
+                .getClient(builderEntry.getUrl())
+                .getExecutionPayloadBid(
+                    slot, parentHash, parentRoot, proposerPubkey, builderEntry.getAuth()));
   }
 
   private boolean validateBid(
