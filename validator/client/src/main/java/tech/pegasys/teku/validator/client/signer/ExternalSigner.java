@@ -278,35 +278,58 @@ public class ExternalSigner implements Signer {
                 slashableGenericMessage("validator registration")));
   }
 
-  // TODO-GLOAS: https://github.com/ethereum/remote-signing-api/issues/23
   @Override
   public SafeFuture<BLSSignature> signExecutionPayloadBid(
       final ExecutionPayloadBid bid, final ForkInfo forkInfo) {
-    return SafeFuture.failedFuture(new UnsupportedOperationException("Not yet implemented"));
+    return sign(
+        signingRootUtil.signingRootForSignExecutionPayloadBid(bid, forkInfo),
+        SignType.EXECUTION_PAYLOAD_BID,
+        Map.of(SignType.EXECUTION_PAYLOAD_BID.getName(), bid, FORK_INFO, forkInfo),
+        slashableGenericMessage("execution payload bid"));
   }
 
   @Override
   public SafeFuture<BLSSignature> signExecutionPayloadEnvelope(
       final ExecutionPayloadEnvelope envelope, final ForkInfo forkInfo) {
-    return SafeFuture.failedFuture(new UnsupportedOperationException("Not yet implemented"));
+    return sign(
+        signingRootUtil.signingRootForSignExecutionPayloadEnvelope(envelope, forkInfo),
+        SignType.EXECUTION_PAYLOAD_ENVELOPE,
+        Map.of(SignType.EXECUTION_PAYLOAD_ENVELOPE.getName(), envelope, FORK_INFO, forkInfo),
+        slashableGenericMessage("execution payload envelope"));
   }
 
   @Override
   public SafeFuture<BLSSignature> signPayloadAttestationData(
       final PayloadAttestationData payloadAttestationData, final ForkInfo forkInfo) {
-    return SafeFuture.failedFuture(new UnsupportedOperationException("Not yet implemented"));
+    return sign(
+        signingRootUtil.signingRootForSignPayloadAttestationData(payloadAttestationData, forkInfo),
+        SignType.PAYLOAD_ATTESTATION_MESSAGE,
+        Map.of(
+            SignType.PAYLOAD_ATTESTATION_MESSAGE.getName(),
+            payloadAttestationData,
+            FORK_INFO,
+            forkInfo),
+        slashableGenericMessage("payload attestation data"));
   }
 
   @Override
   public SafeFuture<BLSSignature> signProposerPreferences(
       final ProposerPreferences proposerPreferences, final ForkInfo forkInfo) {
-    return SafeFuture.failedFuture(new UnsupportedOperationException("Not yet implemented"));
+    return sign(
+        signingRootUtil.signingRootForSignProposerPreferences(proposerPreferences, forkInfo),
+        SignType.PROPOSER_PREFERENCES,
+        Map.of(SignType.PROPOSER_PREFERENCES.getName(), proposerPreferences, FORK_INFO, forkInfo),
+        slashableGenericMessage("proposer preferences"));
   }
 
   @Override
   public SafeFuture<BLSSignature> signBuilderRequestAuth(
       final BuilderRequestAuth builderRequestAuth) {
-    return SafeFuture.failedFuture(new UnsupportedOperationException("Not yet implemented"));
+    return sign(
+        signingRootUtil.signingRootForSignBuilderRequestAuth(builderRequestAuth),
+        SignType.BUILDER_REQUEST_AUTH,
+        Map.of(SignType.BUILDER_REQUEST_AUTH.getName(), builderRequestAuth),
+        slashableGenericMessage("builder request auth"));
   }
 
   @Override
