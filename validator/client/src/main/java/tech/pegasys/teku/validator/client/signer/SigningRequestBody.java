@@ -104,7 +104,9 @@ public record SigningRequestBody(Bytes signingRoot, SignType type, Map<String, O
             SigningRequestBody::getRandaoReveal)
         .withOptionalField(
             SignType.EXECUTION_PAYLOAD_BID.getName(),
-            getExecutionPayloadBid().map(bid -> bid.getSchema().getJsonTypeDefinition()).orElse(null),
+            getExecutionPayloadBid()
+                .map(bid -> bid.getSchema().getJsonTypeDefinition())
+                .orElse(null),
             SigningRequestBody::getExecutionPayloadBid)
         .withOptionalField(
             SignType.EXECUTION_PAYLOAD_ENVELOPE.getName(),
@@ -126,7 +128,7 @@ public record SigningRequestBody(Bytes signingRoot, SignType type, Map<String, O
             SigningRequestBody::getProposerPreferences)
         .withOptionalField(
             SignType.BUILDER_REQUEST_AUTH.getName(),
-            getBuilderRequestAuth().map(auth -> auth.getSchema().getJsonTypeDefinition()).orElse(null),
+            ApiSchemas.BUILDER_REQUEST_AUTH_SCHEMA.getJsonTypeDefinition(),
             SigningRequestBody::getBuilderRequestAuth)
         .build();
   }
