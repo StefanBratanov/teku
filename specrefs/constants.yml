@@ -436,7 +436,7 @@
 
 - name: PAYLOAD_STATUS_EMPTY#gloas
   sources:
-    - file: ethereum/spec/src/main/java/tech/pegasys/teku/spec/datastructures/forkchoice/PayloadStatus.java
+    - file: ethereum/spec/src/main/java/tech/pegasys/teku/spec/datastructures/forkchoice/ForkChoicePayloadStatus.java
       search: PAYLOAD_STATUS_EMPTY(0)
   spec: |
     <spec constant_var="PAYLOAD_STATUS_EMPTY" fork="gloas" hash="84265c9b">
@@ -445,7 +445,7 @@
 
 - name: PAYLOAD_STATUS_FULL#gloas
   sources:
-    - file: ethereum/spec/src/main/java/tech/pegasys/teku/spec/datastructures/forkchoice/PayloadStatus.java
+    - file: ethereum/spec/src/main/java/tech/pegasys/teku/spec/datastructures/forkchoice/ForkChoicePayloadStatus.java
       search: PAYLOAD_STATUS_FULL(1)
   spec: |
     <spec constant_var="PAYLOAD_STATUS_FULL" fork="gloas" hash="357ae377">
@@ -474,7 +474,7 @@
 
 - name: PAYLOAD_STATUS_PENDING#gloas
   sources:
-    - file: ethereum/spec/src/main/java/tech/pegasys/teku/spec/datastructures/forkchoice/PayloadStatus.java
+    - file: ethereum/spec/src/main/java/tech/pegasys/teku/spec/datastructures/forkchoice/ForkChoicePayloadStatus.java
       search: PAYLOAD_STATUS_PENDING(2)
   spec: |
     <spec constant_var="PAYLOAD_STATUS_PENDING" fork="gloas" hash="6a0d6cbf">
