@@ -83,7 +83,7 @@ public class ExecutionPayloadSelectorFactory
                         .getExecutionPayloadByBlockRoot(anchorPoint.getRoot())
                         .thenApply(
                             maybeExecutionPayload ->
-                                    addMetaDataForFinalized(maybeExecutionPayload, anchorPoint)))
+                                addMetaDataForFinalized(maybeExecutionPayload, anchorPoint)))
             .orElse(SafeFuture.completedFuture(Optional.empty()));
   }
 
