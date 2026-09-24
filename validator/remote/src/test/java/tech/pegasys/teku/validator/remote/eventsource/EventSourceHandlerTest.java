@@ -28,8 +28,10 @@ import tech.pegasys.teku.infrastructure.json.JsonUtil;
 import tech.pegasys.teku.infrastructure.metrics.StubMetricsSystem;
 import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 import tech.pegasys.teku.spec.Spec;
+import tech.pegasys.teku.spec.SpecMilestone;
 import tech.pegasys.teku.spec.TestSpecFactory;
 import tech.pegasys.teku.spec.datastructures.blocks.SignedBeaconBlockHeader;
+import tech.pegasys.teku.spec.datastructures.forkchoice.ForkChoicePayloadStatus;
 import tech.pegasys.teku.spec.datastructures.operations.AttesterSlashing;
 import tech.pegasys.teku.spec.datastructures.operations.AttesterSlashingSchema;
 import tech.pegasys.teku.spec.datastructures.operations.IndexedAttestation;
@@ -76,6 +78,35 @@ class EventSourceHandlerTest {
     verify(validatorTimingChannel)
         .onHeadUpdate(
             eq(slot), eq(previousDutyDependentRoot), eq(currentDutyDependentRoot), eq(blockRoot));
+    verify(validatorTimingChannel).onAttestationCreationDue(slot);
+    verifyNoMoreInteractions(validatorTimingChannel);
+  }
+
+  @Test
+  void onMessage_shouldHandleHeadV2Event() throws Exception {
+    final UInt64 slot = UInt64.valueOf(134);
+    final Bytes32 blockRoot = dataStructureUtil.randomBytes32();
+    final Bytes32 currentEpochDependentRoot = dataStructureUtil.randomBytes32();
+    final Bytes32 nextEpochDependentRoot = dataStructureUtil.randomBytes32();
+    final HeadV2Event event =
+        new HeadV2Event(
+            SpecMilestone.GLOAS,
+            new HeadV2Event.Data(
+                slot,
+                blockRoot,
+                dataStructureUtil.randomBytes32(),
+                ForkChoicePayloadStatus.PAYLOAD_STATUS_FULL,
+                false,
+                currentEpochDependentRoot,
+                nextEpochDependentRoot,
+                false));
+    handler.onMessage(
+        EventType.head_v2.name(),
+        new MessageEvent(JsonUtil.serialize(event, HeadV2Event.TYPE_DEFINITION)));
+
+    verify(validatorTimingChannel)
+        .onHeadUpdate(
+            eq(slot), eq(currentEpochDependentRoot), eq(nextEpochDependentRoot), eq(blockRoot));
     verify(validatorTimingChannel).onAttestationCreationDue(slot);
     verifyNoMoreInteractions(validatorTimingChannel);
   }

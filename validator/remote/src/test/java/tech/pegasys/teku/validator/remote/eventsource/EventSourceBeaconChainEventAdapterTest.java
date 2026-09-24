@@ -14,6 +14,7 @@
 package tech.pegasys.teku.validator.remote.eventsource;
 
 import static java.util.Collections.emptyMap;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -72,6 +73,21 @@ public class EventSourceBeaconChainEventAdapterTest {
         initEventSourceBeaconChainEventAdapter(shutdownWhenValidatorSlashedEnabled);
     eventSourceBeaconChainEventAdapter.createEventSource(beaconApiMock);
     verifyEventSourceSubscriptionUrl(httpUrlMock, shutdownWhenValidatorSlashedEnabled);
+  }
+
+  @Test
+  public void shouldFallBackToHeadEventWhenBeaconNodeDoesNotSupportHeadV2() {
+    final EventSourceBeaconChainEventAdapter eventSourceBeaconChainEventAdapter =
+        initEventSourceBeaconChainEventAdapter(false);
+    eventSourceBeaconChainEventAdapter.eventSource =
+        eventSourceBeaconChainEventAdapter.createEventSource(beaconApiMock);
+
+    eventSourceBeaconChainEventAdapter.fallbackToLegacyHeadEvent(beaconApiMock);
+
+    assertThat(eventSourceBeaconChainEventAdapter.headV2Supported).isFalse();
+    verify(httpUrlMock)
+        .resolve(
+            ValidatorApiMethod.EVENTS.getPath(emptyMap()) + "?topics=" + EventType.head.name());
   }
 
   @Test
@@ -157,8 +173,8 @@ public class EventSourceBeaconChainEventAdapterTest {
       final HttpUrl endpoint, final boolean shutdownWhenValidatorSlashedEnabled) {
     Stream<EventType> eventTypes =
         shutdownWhenValidatorSlashedEnabled
-            ? Stream.of(EventType.head, EventType.attester_slashing, EventType.proposer_slashing)
-            : Stream.of(EventType.head);
+            ? Stream.of(EventType.head_v2, EventType.attester_slashing, EventType.proposer_slashing)
+            : Stream.of(EventType.head_v2);
     verify(endpoint)
         .resolve(
             ValidatorApiMethod.EVENTS.getPath(emptyMap())

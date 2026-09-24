@@ -14,12 +14,14 @@
 package tech.pegasys.teku.validator.remote.eventsource;
 
 import static java.util.Collections.emptyMap;
+import static tech.pegasys.teku.infrastructure.http.HttpStatusCodes.SC_BAD_REQUEST;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.launchdarkly.eventsource.ConnectStrategy;
 import com.launchdarkly.eventsource.EventSource;
 import com.launchdarkly.eventsource.RetryDelayStrategy;
+import com.launchdarkly.eventsource.StreamHttpErrorException;
 import com.launchdarkly.eventsource.background.BackgroundEventSource;
 import com.launchdarkly.eventsource.background.ConnectionErrorHandler.Action;
 import java.time.Duration;
@@ -55,8 +57,12 @@ public class EventSourceBeaconChainEventAdapter
 
   private final CountDownLatch runningLatch = new CountDownLatch(1);
 
-  private volatile BackgroundEventSource eventSource;
+  @VisibleForTesting volatile BackgroundEventSource eventSource;
   @VisibleForTesting volatile RemoteValidatorApiChannel currentBeaconNodeUsedForEventStreaming;
+  // Optimistically try head_v2 first; if the beacon node doesn't recognise it (400 per the spec:
+  // https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Events/eventstream), fall back
+  // to head permanently for the remainder of this adapter's lifetime.
+  @VisibleForTesting volatile boolean headV2Supported = true;
 
   private final BeaconNodeReadinessManager beaconNodeReadinessManager;
   private final RemoteValidatorApiChannel primaryBeaconNodeApi;
@@ -144,7 +150,7 @@ public class EventSourceBeaconChainEventAdapter
   BackgroundEventSource createEventSource(final RemoteValidatorApiChannel beaconNodeApi) {
 
     final List<EventType> eventTypes = new ArrayList<>();
-    eventTypes.add(EventType.head);
+    eventTypes.add(headV2Supported ? EventType.head_v2 : EventType.head);
     if (shutdownWhenValidatorSlashedEnabled) {
       eventTypes.add(EventType.attester_slashing);
       eventTypes.add(EventType.proposer_slashing);
@@ -159,11 +165,32 @@ public class EventSourceBeaconChainEventAdapter
                     .maxDelay(MAX_RECONNECT_TIME.toMillis(), TimeUnit.MILLISECONDS));
     return new BackgroundEventSource.Builder(eventSourceHandler, eventSourceBuilder)
         .connectionErrorHandler(
-            __ -> {
+            throwable -> {
+              if (headV2Supported && isHeadV2UnsupportedError(throwable)) {
+                LOG.warn(
+                    "Beacon node doesn't seem to support `head_v2` SSE event. Will try fallback to `head`.",
+                    throwable);
+                fallbackToLegacyHeadEvent(beaconNodeApi);
+                return Action.PROCEED;
+              }
               switchToFailoverEventStreamIfAvailable();
               return Action.PROCEED;
             })
         .build();
+  }
+
+  private static boolean isHeadV2UnsupportedError(final Throwable throwable) {
+    return throwable instanceof StreamHttpErrorException streamHttpErrorException
+        && streamHttpErrorException.getCode() == SC_BAD_REQUEST;
+  }
+
+  // synchronized for the same reason as switchToFailoverEventStreamIfAvailable
+  @VisibleForTesting
+  synchronized void fallbackToLegacyHeadEvent(final RemoteValidatorApiChannel beaconNodeApi) {
+    headV2Supported = false;
+    eventSource.close();
+    eventSource = createEventSource(beaconNodeApi);
+    eventSource.start();
   }
 
   private HttpUrl createEventStreamSourceUrl(
