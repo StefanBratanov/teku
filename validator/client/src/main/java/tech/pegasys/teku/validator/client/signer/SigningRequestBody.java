@@ -42,6 +42,7 @@ import tech.pegasys.teku.validator.api.signer.RandaoRevealWrapper;
 import tech.pegasys.teku.validator.api.signer.SignType;
 import tech.pegasys.teku.validator.api.signer.SyncAggregatorSelectionDataWrapper;
 import tech.pegasys.teku.validator.api.signer.SyncCommitteeMessageWrapper;
+import tech.pegasys.teku.validator.api.signer.VersionedWrapper;
 
 public record SigningRequestBody(Bytes signingRoot, SignType type, Map<String, Object> metadata) {
   private static final StringValueTypeDefinition<Bytes> BYTES_TYPE =
@@ -104,31 +105,23 @@ public record SigningRequestBody(Bytes signingRoot, SignType type, Map<String, O
             SigningRequestBody::getRandaoReveal)
         .withOptionalField(
             SignType.EXECUTION_PAYLOAD_BID.getName(),
-            getExecutionPayloadBid()
-                .map(bid -> bid.getSchema().getJsonTypeDefinition())
-                .orElse(null),
+            getExecutionPayloadBid().map(VersionedWrapper::getJsonTypeDefinition).orElse(null),
             SigningRequestBody::getExecutionPayloadBid)
         .withOptionalField(
             SignType.EXECUTION_PAYLOAD_ENVELOPE.getName(),
-            getExecutionPayloadEnvelope()
-                .map(envelope -> envelope.getSchema().getJsonTypeDefinition())
-                .orElse(null),
+            getExecutionPayloadEnvelope().map(VersionedWrapper::getJsonTypeDefinition).orElse(null),
             SigningRequestBody::getExecutionPayloadEnvelope)
         .withOptionalField(
             SignType.PAYLOAD_ATTESTATION_MESSAGE.getName(),
-            getPayloadAttestationData()
-                .map(data -> data.getSchema().getJsonTypeDefinition())
-                .orElse(null),
+            getPayloadAttestationData().map(VersionedWrapper::getJsonTypeDefinition).orElse(null),
             SigningRequestBody::getPayloadAttestationData)
         .withOptionalField(
             SignType.PROPOSER_PREFERENCES.getName(),
-            getProposerPreferences()
-                .map(preferences -> preferences.getSchema().getJsonTypeDefinition())
-                .orElse(null),
+            getProposerPreferences().map(VersionedWrapper::getJsonTypeDefinition).orElse(null),
             SigningRequestBody::getProposerPreferences)
         .withOptionalField(
             SignType.BUILDER_REQUEST_AUTH.getName(),
-            ApiSchemas.BUILDER_REQUEST_AUTH_SCHEMA.getJsonTypeDefinition(),
+            getBuilderRequestAuth().map(VersionedWrapper::getJsonTypeDefinition).orElse(null),
             SigningRequestBody::getBuilderRequestAuth)
         .build();
   }
@@ -189,28 +182,38 @@ public record SigningRequestBody(Bytes signingRoot, SignType type, Map<String, O
         (AggregationSlotWrapper) metadata.get(SignType.AGGREGATION_SLOT.getName()));
   }
 
-  private Optional<ExecutionPayloadBid> getExecutionPayloadBid() {
+  @SuppressWarnings("unchecked")
+  private Optional<VersionedWrapper<ExecutionPayloadBid>> getExecutionPayloadBid() {
     return Optional.ofNullable(
-        (ExecutionPayloadBid) metadata.get(SignType.EXECUTION_PAYLOAD_BID.getName()));
+        (VersionedWrapper<ExecutionPayloadBid>)
+            metadata.get(SignType.EXECUTION_PAYLOAD_BID.getName()));
   }
 
-  private Optional<ExecutionPayloadEnvelope> getExecutionPayloadEnvelope() {
+  @SuppressWarnings("unchecked")
+  private Optional<VersionedWrapper<ExecutionPayloadEnvelope>> getExecutionPayloadEnvelope() {
     return Optional.ofNullable(
-        (ExecutionPayloadEnvelope) metadata.get(SignType.EXECUTION_PAYLOAD_ENVELOPE.getName()));
+        (VersionedWrapper<ExecutionPayloadEnvelope>)
+            metadata.get(SignType.EXECUTION_PAYLOAD_ENVELOPE.getName()));
   }
 
-  private Optional<PayloadAttestationData> getPayloadAttestationData() {
+  @SuppressWarnings("unchecked")
+  private Optional<VersionedWrapper<PayloadAttestationData>> getPayloadAttestationData() {
     return Optional.ofNullable(
-        (PayloadAttestationData) metadata.get(SignType.PAYLOAD_ATTESTATION_MESSAGE.getName()));
+        (VersionedWrapper<PayloadAttestationData>)
+            metadata.get(SignType.PAYLOAD_ATTESTATION_MESSAGE.getName()));
   }
 
-  private Optional<ProposerPreferences> getProposerPreferences() {
+  @SuppressWarnings("unchecked")
+  private Optional<VersionedWrapper<ProposerPreferences>> getProposerPreferences() {
     return Optional.ofNullable(
-        (ProposerPreferences) metadata.get(SignType.PROPOSER_PREFERENCES.getName()));
+        (VersionedWrapper<ProposerPreferences>)
+            metadata.get(SignType.PROPOSER_PREFERENCES.getName()));
   }
 
-  private Optional<BuilderRequestAuth> getBuilderRequestAuth() {
+  @SuppressWarnings("unchecked")
+  private Optional<VersionedWrapper<BuilderRequestAuth>> getBuilderRequestAuth() {
     return Optional.ofNullable(
-        (BuilderRequestAuth) metadata.get(SignType.BUILDER_REQUEST_AUTH.getName()));
+        (VersionedWrapper<BuilderRequestAuth>)
+            metadata.get(SignType.BUILDER_REQUEST_AUTH.getName()));
   }
 }

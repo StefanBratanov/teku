@@ -19,10 +19,15 @@ import static org.mockserver.model.HttpResponse.response;
 import static tech.pegasys.teku.validator.client.signer.ExternalSignerTestUtil.validateMetrics;
 import static tech.pegasys.teku.validator.client.signer.ExternalSignerTestUtil.verifySignRequest;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.mockserver.model.HttpRequest;
 import tech.pegasys.teku.bls.BLSSignature;
+import tech.pegasys.teku.infrastructure.ssz.SszData;
 import tech.pegasys.teku.spec.Spec;
+import tech.pegasys.teku.spec.SpecMilestone;
 import tech.pegasys.teku.spec.TestSpecFactory;
 import tech.pegasys.teku.spec.datastructures.builder.versions.gloas.BuilderRequestAuth;
 import tech.pegasys.teku.spec.datastructures.epbs.versions.gloas.ExecutionPayloadBid;
@@ -30,8 +35,11 @@ import tech.pegasys.teku.spec.datastructures.epbs.versions.gloas.ExecutionPayloa
 import tech.pegasys.teku.spec.datastructures.epbs.versions.gloas.PayloadAttestationData;
 import tech.pegasys.teku.spec.datastructures.epbs.versions.gloas.ProposerPreferences;
 import tech.pegasys.teku.validator.api.signer.SignType;
+import tech.pegasys.teku.validator.api.signer.VersionedWrapper;
 
 public class ExternalSignerGloasIntegrationTest extends AbstractExternalSignerIntegrationTest {
+
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   @Override
   public Spec getSpec() {
@@ -51,13 +59,14 @@ public class ExternalSignerGloasIntegrationTest extends AbstractExternalSignerIn
         new SigningRequestBody(
             signingRootUtil.signingRootForSignExecutionPayloadBid(bid, forkInfo),
             SignType.EXECUTION_PAYLOAD_BID,
-            Map.of("fork_info", forkInfo, "execution_payload_bid", bid));
+            Map.of("fork_info", forkInfo, "execution_payload_bid", gloas(bid)));
     verifySignRequest(
         client,
         KEYPAIR.getPublicKey().toString(),
         signingRequestBody,
         getSpec().getGenesisSchemaDefinitions());
     validateMetrics(metricsSystem, 1, 0, 0);
+    verifyVersionedPayload("execution_payload_bid", "slot", bid.getSlot().toString());
   }
 
   @Test
@@ -74,13 +83,15 @@ public class ExternalSignerGloasIntegrationTest extends AbstractExternalSignerIn
         new SigningRequestBody(
             signingRootUtil.signingRootForSignExecutionPayloadEnvelope(envelope, forkInfo),
             SignType.EXECUTION_PAYLOAD_ENVELOPE,
-            Map.of("fork_info", forkInfo, "execution_payload_envelope", envelope));
+            Map.of("fork_info", forkInfo, "execution_payload_envelope", gloas(envelope)));
     verifySignRequest(
         client,
         KEYPAIR.getPublicKey().toString(),
         signingRequestBody,
         getSpec().getGenesisSchemaDefinitions());
     validateMetrics(metricsSystem, 1, 0, 0);
+    verifyVersionedPayload(
+        "execution_payload_envelope", "builder_index", envelope.getBuilderIndex().toString());
   }
 
   @Test
@@ -99,13 +110,19 @@ public class ExternalSignerGloasIntegrationTest extends AbstractExternalSignerIn
             signingRootUtil.signingRootForSignPayloadAttestationData(
                 payloadAttestationData, forkInfo),
             SignType.PAYLOAD_ATTESTATION_MESSAGE,
-            Map.of("fork_info", forkInfo, "payload_attestation_message", payloadAttestationData));
+            Map.of(
+                "fork_info",
+                forkInfo,
+                "payload_attestation_message",
+                gloas(payloadAttestationData)));
     verifySignRequest(
         client,
         KEYPAIR.getPublicKey().toString(),
         signingRequestBody,
         getSpec().getGenesisSchemaDefinitions());
     validateMetrics(metricsSystem, 1, 0, 0);
+    verifyVersionedPayload(
+        "payload_attestation_message", "slot", payloadAttestationData.getSlot().toString());
   }
 
   @Test
@@ -122,13 +139,15 @@ public class ExternalSignerGloasIntegrationTest extends AbstractExternalSignerIn
         new SigningRequestBody(
             signingRootUtil.signingRootForSignProposerPreferences(proposerPreferences, forkInfo),
             SignType.PROPOSER_PREFERENCES,
-            Map.of("fork_info", forkInfo, "proposer_preferences", proposerPreferences));
+            Map.of("fork_info", forkInfo, "proposer_preferences", gloas(proposerPreferences)));
     verifySignRequest(
         client,
         KEYPAIR.getPublicKey().toString(),
         signingRequestBody,
         getSpec().getGenesisSchemaDefinitions());
     validateMetrics(metricsSystem, 1, 0, 0);
+    verifyVersionedPayload(
+        "proposer_preferences", "proposal_slot", proposerPreferences.getProposalSlot().toString());
   }
 
   @Test
@@ -144,12 +163,29 @@ public class ExternalSignerGloasIntegrationTest extends AbstractExternalSignerIn
         new SigningRequestBody(
             signingRootUtil.signingRootForSignBuilderRequestAuth(builderRequestAuth),
             SignType.BUILDER_REQUEST_AUTH,
-            Map.of(SignType.BUILDER_REQUEST_AUTH.getName(), builderRequestAuth));
+            Map.of(SignType.BUILDER_REQUEST_AUTH.getName(), gloas(builderRequestAuth)));
     verifySignRequest(
         client,
         KEYPAIR.getPublicKey().toString(),
         signingRequestBody,
         getSpec().getGenesisSchemaDefinitions());
     validateMetrics(metricsSystem, 1, 0, 0);
+    verifyVersionedPayload("builder_request_auth", "slot", builderRequestAuth.getSlot().toString());
+  }
+
+  private static <T extends SszData> VersionedWrapper<T> gloas(final T data) {
+    return new VersionedWrapper<>(SpecMilestone.GLOAS, data);
+  }
+
+  private void verifyVersionedPayload(
+      final String key, final String dataField, final String expectedValue) throws Exception {
+    final HttpRequest[] recordedRequests = client.retrieveRecordedRequests(request());
+    assertThat(recordedRequests).hasSize(1);
+    final JsonNode body = OBJECT_MAPPER.readTree(recordedRequests[0].getBodyAsString());
+    final JsonNode payload = body.get(key);
+    assertThat(payload).isNotNull();
+    assertThat(payload.get("version").asText()).isEqualTo("GLOAS");
+    assertThat(payload.get("data").isObject()).isTrue();
+    assertThat(payload.get("data").get(dataField).asText()).isEqualTo(expectedValue);
   }
 }
