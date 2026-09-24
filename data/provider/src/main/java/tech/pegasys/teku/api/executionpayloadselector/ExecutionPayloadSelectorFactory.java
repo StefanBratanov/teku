@@ -83,7 +83,7 @@ public class ExecutionPayloadSelectorFactory
                         .getExecutionPayloadByBlockRoot(anchorPoint.getRoot())
                         .thenApply(
                             maybeExecutionPayload ->
-                                addMetaData(maybeExecutionPayload, anchorPoint)))
+                                    addMetaDataForFinalized(maybeExecutionPayload, anchorPoint)))
             .orElse(SafeFuture.completedFuture(Optional.empty()));
   }
 
@@ -125,7 +125,7 @@ public class ExecutionPayloadSelectorFactory
             client.isFinalized(executionPayload.getSlot())));
   }
 
-  private Optional<ExecutionPayloadAndMetaData> addMetaData(
+  private Optional<ExecutionPayloadAndMetaData> addMetaDataForFinalized(
       final Optional<SignedExecutionPayloadEnvelope> maybeExecutionPayload,
       final AnchorPoint anchorPoint) {
     if (maybeExecutionPayload.isEmpty()) {
