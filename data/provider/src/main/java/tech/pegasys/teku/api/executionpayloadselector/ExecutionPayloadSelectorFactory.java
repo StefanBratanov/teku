@@ -13,6 +13,8 @@
 
 package tech.pegasys.teku.api.executionpayloadselector;
 
+import static tech.pegasys.teku.spec.config.SpecConfig.GENESIS_SLOT;
+
 import java.util.Optional;
 import org.apache.tuweni.bytes.Bytes32;
 import tech.pegasys.teku.api.AbstractSelectorFactory;
@@ -24,8 +26,6 @@ import tech.pegasys.teku.spec.datastructures.metadata.ExecutionPayloadAndMetaDat
 import tech.pegasys.teku.spec.datastructures.state.AnchorPoint;
 import tech.pegasys.teku.storage.client.ChainHead;
 import tech.pegasys.teku.storage.client.CombinedChainDataClient;
-
-import static tech.pegasys.teku.spec.config.SpecConfig.GENESIS_SLOT;
 
 public class ExecutionPayloadSelectorFactory
     extends AbstractSelectorFactory<ExecutionPayloadSelector> {
