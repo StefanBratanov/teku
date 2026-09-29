@@ -16,8 +16,10 @@ package tech.pegasys.teku.validator.client.restapi.apis.schema;
 import static com.google.common.base.Preconditions.checkArgument;
 import static tech.pegasys.teku.spec.datastructures.builder.versions.gloas.BuilderConfigSchema.MAX_BUILDER_ENTRIES;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 
 /**
@@ -39,6 +41,10 @@ public record BuilderConfig(
         builders.size() <= MAX_BUILDER_ENTRIES,
         "builders must contain at most %s entries",
         MAX_BUILDER_ENTRIES);
+    final Set<String> urls = new HashSet<>();
+    for (final BuilderEntry builder : builders) {
+      checkArgument(urls.add(builder.url()), "builders contain duplicate url %s", builder.url());
+    }
   }
 
   public static class Builder {
