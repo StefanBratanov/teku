@@ -37,6 +37,7 @@ public class ExecutionLayerConfiguration {
   public static final UInt64 DEFAULT_BUILDER_BID_COMPARE_FACTOR = UInt64.valueOf(90);
   public static final boolean DEFAULT_BUILDER_SET_USER_AGENT_HEADER = true;
   public static final boolean DEFAULT_USE_SHOULD_OVERRIDE_BUILDER_FLAG = true;
+  public static final boolean DEFAULT_CONSIDER_P2P_BIDS_DURING_BLOCK_PROPOSAL = true;
   public static final boolean DEFAULT_EXCHANGE_CAPABILITIES_MONITORING_ENABLED = true;
   public static final String BUILDER_ALWAYS_KEYWORD = "BUILDER_ALWAYS";
 
@@ -52,6 +53,7 @@ public class ExecutionLayerConfiguration {
   private final UInt64 builderBidCompareFactor;
   private final boolean builderSetUserAgentHeader;
   private final boolean useShouldOverrideBuilderFlag;
+  private final boolean considerP2PBidsDuringBlockProposal;
   private final boolean exchangeCapabilitiesMonitoringEnabled;
 
   private ExecutionLayerConfiguration(
@@ -67,6 +69,7 @@ public class ExecutionLayerConfiguration {
       final UInt64 builderBidCompareFactor,
       final boolean builderSetUserAgentHeader,
       final boolean useShouldOverrideBuilderFlag,
+      final boolean considerP2PBidsDuringBlockProposal,
       final boolean exchangeCapabilitiesMonitoringEnabled) {
     this.spec = spec;
     this.engineEndpoint = engineEndpoint;
@@ -81,6 +84,7 @@ public class ExecutionLayerConfiguration {
     this.builderBidCompareFactor = builderBidCompareFactor;
     this.builderSetUserAgentHeader = builderSetUserAgentHeader;
     this.useShouldOverrideBuilderFlag = useShouldOverrideBuilderFlag;
+    this.considerP2PBidsDuringBlockProposal = considerP2PBidsDuringBlockProposal;
     this.exchangeCapabilitiesMonitoringEnabled = exchangeCapabilitiesMonitoringEnabled;
   }
 
@@ -143,6 +147,10 @@ public class ExecutionLayerConfiguration {
     return useShouldOverrideBuilderFlag;
   }
 
+  public boolean getConsiderP2PBidsDuringBlockProposal() {
+    return considerP2PBidsDuringBlockProposal;
+  }
+
   public boolean isExchangeCapabilitiesMonitoringEnabled() {
     return exchangeCapabilitiesMonitoringEnabled;
   }
@@ -161,6 +169,8 @@ public class ExecutionLayerConfiguration {
     private String builderBidCompareFactor = DEFAULT_BUILDER_BID_COMPARE_FACTOR.toString();
     private boolean builderSetUserAgentHeader = DEFAULT_BUILDER_SET_USER_AGENT_HEADER;
     private boolean useShouldOverrideBuilderFlag = DEFAULT_USE_SHOULD_OVERRIDE_BUILDER_FLAG;
+    private boolean considerP2PBidsDuringBlockProposal =
+        DEFAULT_CONSIDER_P2P_BIDS_DURING_BLOCK_PROPOSAL;
     private boolean exchangeCapabilitiesMonitoringEnabled =
         DEFAULT_EXCHANGE_CAPABILITIES_MONITORING_ENABLED;
 
@@ -200,6 +210,7 @@ public class ExecutionLayerConfiguration {
           builderBidCompareFactor,
           builderSetUserAgentHeader,
           useShouldOverrideBuilderFlag,
+          considerP2PBidsDuringBlockProposal,
           exchangeCapabilitiesMonitoringEnabled);
     }
 
@@ -263,6 +274,12 @@ public class ExecutionLayerConfiguration {
 
     public Builder useShouldOverrideBuilderFlag(final boolean useShouldOverrideBuilderFlag) {
       this.useShouldOverrideBuilderFlag = useShouldOverrideBuilderFlag;
+      return this;
+    }
+
+    public Builder considerP2PBidsDuringBlockProposal(
+        final boolean considerP2PBidsDuringBlockProposal) {
+      this.considerP2PBidsDuringBlockProposal = considerP2PBidsDuringBlockProposal;
       return this;
     }
 
