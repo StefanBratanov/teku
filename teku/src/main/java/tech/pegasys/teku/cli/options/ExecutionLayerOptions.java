@@ -21,7 +21,7 @@ import static tech.pegasys.teku.services.executionlayer.ExecutionLayerConfigurat
 import static tech.pegasys.teku.services.executionlayer.ExecutionLayerConfiguration.DEFAULT_BUILDER_CIRCUIT_BREAKER_ENABLED;
 import static tech.pegasys.teku.services.executionlayer.ExecutionLayerConfiguration.DEFAULT_BUILDER_CIRCUIT_BREAKER_WINDOW;
 import static tech.pegasys.teku.services.executionlayer.ExecutionLayerConfiguration.DEFAULT_BUILDER_SET_USER_AGENT_HEADER;
-import static tech.pegasys.teku.services.executionlayer.ExecutionLayerConfiguration.DEFAULT_CONSIDER_P2P_BIDS_DURING_BLOCK_PROPOSAL;
+import static tech.pegasys.teku.services.executionlayer.ExecutionLayerConfiguration.DEFAULT_CONSIDER_P2P_BIDS_DURING_BLOCK_PRODUCTION;
 import static tech.pegasys.teku.services.executionlayer.ExecutionLayerConfiguration.DEFAULT_EXCHANGE_CAPABILITIES_MONITORING_ENABLED;
 import static tech.pegasys.teku.services.executionlayer.ExecutionLayerConfiguration.DEFAULT_USE_SHOULD_OVERRIDE_BUILDER_FLAG;
 
@@ -134,16 +134,16 @@ public class ExecutionLayerOptions {
   private boolean useShouldOverrideBuilderFlag = DEFAULT_USE_SHOULD_OVERRIDE_BUILDER_FLAG;
 
   @Option(
-      names = {"--Xconsider-p2p-bids-during-block-proposal"},
+      names = {"--Xconsider-p2p-bids-during-block-production"},
       paramLabel = "<BOOLEAN>",
       description =
-          "Whether or not to consider execution payload bids received over p2p when proposing a block.",
+          "Whether or not to consider execution payload bids received over p2p when producing a block.",
       arity = "0..1",
       showDefaultValue = Visibility.ALWAYS,
       fallbackValue = "true",
       hidden = true)
-  private boolean considerP2PBidsDuringBlockProposal =
-      DEFAULT_CONSIDER_P2P_BIDS_DURING_BLOCK_PROPOSAL;
+  private boolean considerP2PBidsDuringBlockProduction =
+      DEFAULT_CONSIDER_P2P_BIDS_DURING_BLOCK_PRODUCTION;
 
   @Option(
       names = {"--exchange-capabilities-monitoring-enabled"},
@@ -171,7 +171,7 @@ public class ExecutionLayerOptions {
                 .builderBidCompareFactor(builderBidCompareFactor)
                 .builderSetUserAgentHeader(builderSetUserAgentHeader)
                 .useShouldOverrideBuilderFlag(useShouldOverrideBuilderFlag)
-                .considerP2PBidsDuringBlockProposal(considerP2PBidsDuringBlockProposal)
+                .considerP2PBidsDuringBlockProduction(considerP2PBidsDuringBlockProduction)
                 .exchangeCapabilitiesMonitoringEnabled(exchangeCapabilitiesMonitoringEnabled));
   }
 }

@@ -73,7 +73,7 @@ public class DefaultExecutionPayloadBidManager
   private final BuilderBidFetcher builderBidFetcher;
   private final ExecutionPayloadBidSelector bidSelector;
   private final Supplier<Optional<ReadOnlyForkChoiceStrategy>> forkChoiceStrategySupplier;
-  private final boolean considerP2PBidsDuringBlockProposal;
+  private final boolean considerP2PBidsDuringBlockProduction;
 
   private final Subscribers<OperationAddedSubscriber<SignedExecutionPayloadBid>> subscribers =
       Subscribers.create(true);
@@ -94,7 +94,7 @@ public class DefaultExecutionPayloadBidManager
       final BuilderBidFetcher builderBidFetcher,
       final ExecutionPayloadBidSelector bidSelector,
       final Supplier<Optional<ReadOnlyForkChoiceStrategy>> forkChoiceStrategySupplier,
-      final boolean considerP2PBidsDuringBlockProposal) {
+      final boolean considerP2PBidsDuringBlockProduction) {
     this.spec = spec;
     this.executionPayloadBidGossipValidator = executionPayloadBidGossipValidator;
     this.executionPayloadBidCircuitBreaker = executionPayloadBidCircuitBreaker;
@@ -104,7 +104,7 @@ public class DefaultExecutionPayloadBidManager
     this.builderBidFetcher = builderBidFetcher;
     this.bidSelector = bidSelector;
     this.forkChoiceStrategySupplier = forkChoiceStrategySupplier;
-    this.considerP2PBidsDuringBlockProposal = considerP2PBidsDuringBlockProposal;
+    this.considerP2PBidsDuringBlockProduction = considerP2PBidsDuringBlockProduction;
   }
 
   @Override
@@ -165,8 +165,8 @@ public class DefaultExecutionPayloadBidManager
   }
 
   private void addBid(final SignedExecutionPayloadBid signedBid) {
-    // no caching is needed if p2p bids are not needed for block proposal
-    if (!considerP2PBidsDuringBlockProposal) {
+    // no caching is needed if p2p bids are not needed for block production
+    if (!considerP2PBidsDuringBlockProduction) {
       return;
     }
     bidsBySlot
@@ -259,7 +259,7 @@ public class DefaultExecutionPayloadBidManager
               .thenApply(
                   builderBids -> {
                     final Set<RemoteBid> p2pBids =
-                        considerP2PBidsDuringBlockProposal
+                        considerP2PBidsDuringBlockProduction
                             ? getP2PBidsForSlot(slot)
                             : Collections.emptySet();
                     return bidSelector.selectBestRemoteBid(
