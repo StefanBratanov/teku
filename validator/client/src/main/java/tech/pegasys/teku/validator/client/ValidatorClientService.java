@@ -624,7 +624,11 @@ public class ValidatorClientService extends Service {
       validatorTimingChannels.add(proposerPreferencesPublisher);
       final BuilderPreferencesPublisher builderPreferencesPublisher =
           new BuilderPreferencesPublisher(
-              validators, spec, validatorApiChannel, builderConfigProvider);
+              validators,
+              spec,
+              validatorApiChannel,
+              proposerConfigManager.orElseThrow(),
+              builderConfigProvider);
       validatorTimingChannels.add(builderPreferencesPublisher);
     }
 
