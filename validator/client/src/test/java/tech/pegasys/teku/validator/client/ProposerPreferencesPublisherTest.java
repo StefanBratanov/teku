@@ -90,6 +90,7 @@ public class ProposerPreferencesPublisherTest {
             proposerConfigPropertiesProvider,
             forkProvider);
 
+    when(proposerConfigPropertiesProvider.refresh()).thenReturn(SafeFuture.COMPLETE);
     when(proposerConfigPropertiesProvider.getFeeRecipient(publicKey))
         .thenReturn(Optional.of(feeRecipient));
     when(proposerConfigPropertiesProvider.getGasLimit(eq(publicKey), any())).thenReturn(gasLimit);
