@@ -81,9 +81,7 @@ public class DefaultBuilderConfigProvider implements BuilderConfigProvider, Vali
     if (cachedBuilderConfig.containsKey(cacheKey)) {
       return SafeFuture.completedFuture(Optional.of(cachedBuilderConfig.get(cacheKey)));
     }
-    return proposerConfigPropertiesProvider
-        .refresh()
-        .thenCompose(__ -> createBuilderConfig(validator, slot, cacheKey));
+    return createBuilderConfig(validator, slot, cacheKey);
   }
 
   private SafeFuture<Optional<BuilderConfig>> createBuilderConfig(

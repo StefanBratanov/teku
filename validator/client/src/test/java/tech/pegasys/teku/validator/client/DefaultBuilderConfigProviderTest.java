@@ -15,7 +15,6 @@ package tech.pegasys.teku.validator.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -37,10 +36,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.InOrder;
 import tech.pegasys.teku.bls.BLSPublicKey;
 import tech.pegasys.teku.bls.BLSSignature;
-import tech.pegasys.teku.infrastructure.async.SafeFuture;
 import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 import tech.pegasys.teku.spec.Spec;
 import tech.pegasys.teku.spec.TestSpecFactory;
@@ -76,7 +73,6 @@ class DefaultBuilderConfigProviderTest {
   @BeforeEach
   void setUp() {
     when(proposerConfigPropertiesProvider.isReadyToProvideProperties()).thenReturn(true);
-    when(proposerConfigPropertiesProvider.refresh()).thenReturn(SafeFuture.COMPLETE);
   }
 
   @Test
@@ -87,7 +83,8 @@ class DefaultBuilderConfigProviderTest {
 
     assertThat(provider.getBuilderConfig(validator, UInt64.ZERO))
         .isCompletedWithValue(Optional.empty());
-    verify(proposerConfigPropertiesProvider, never()).refresh();
+
+    verifyNoInteractions(proposerConfigPropertiesProvider);
   }
 
   @Test
@@ -95,7 +92,8 @@ class DefaultBuilderConfigProviderTest {
     when(proposerConfigPropertiesProvider.isReadyToProvideProperties()).thenReturn(false);
     assertThat(provider.getBuilderConfig(validator, UInt64.ZERO))
         .isCompletedWithValue(Optional.empty());
-    verify(proposerConfigPropertiesProvider, never()).refresh();
+
+    verify(proposerConfigPropertiesProvider, never()).resolveBuilderConfig(any());
   }
 
   @Test
@@ -130,10 +128,7 @@ class DefaultBuilderConfigProviderTest {
 
     final Optional<BuilderConfig> result = provider.getBuilderConfig(validator, SLOT).join();
 
-    // the proposer config is refreshed before the builder config is read from it
-    final InOrder inOrder = inOrder(proposerConfigPropertiesProvider);
-    inOrder.verify(proposerConfigPropertiesProvider).refresh();
-    inOrder.verify(proposerConfigPropertiesProvider).resolveBuilderConfig(validator.getPublicKey());
+    verify(proposerConfigPropertiesProvider).resolveBuilderConfig(validator.getPublicKey());
 
     assertThat(result).isPresent();
     final BuilderConfig builderConfig = result.get();
@@ -221,9 +216,8 @@ class DefaultBuilderConfigProviderTest {
 
     assertThat(second).isEqualTo(first);
     verifyNoMoreInteractions(signer);
-    // served from the cache, so the proposer config is neither refreshed nor read again
+    // served from the cache, so the proposer config is not read again
     verify(proposerConfigPropertiesProvider, times(2)).isReadyToProvideProperties();
-    verify(proposerConfigPropertiesProvider).refresh();
     verify(proposerConfigPropertiesProvider).resolveBuilderConfig(validator.getPublicKey());
     verifyNoMoreInteractions(proposerConfigPropertiesProvider);
   }
