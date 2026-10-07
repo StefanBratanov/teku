@@ -14,12 +14,7 @@
 package tech.pegasys.teku.validator.client;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Strings.isNullOrEmpty;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,6 +32,7 @@ import tech.pegasys.teku.validator.api.ValidatorConfig;
 import tech.pegasys.teku.validator.api.ValidatorTimingChannel;
 import tech.pegasys.teku.validator.client.ProposerConfig.BuilderConfig;
 import tech.pegasys.teku.validator.client.ProposerConfig.BuilderOverrides;
+import tech.pegasys.teku.validator.client.ProposerConfig.BuilderUrl;
 import tech.pegasys.teku.validator.client.ProposerConfig.Config;
 import tech.pegasys.teku.validator.client.ProposerConfig.RegistrationOverrides;
 import tech.pegasys.teku.validator.client.ResolvedBuilderConfig.ResolvedBuilderEntry;
@@ -46,9 +42,6 @@ import tech.pegasys.teku.validator.client.proposerconfig.ProposerConfigProvider;
 public class ProposerConfigManager
     implements ProposerConfigPropertiesProvider, ValidatorTimingChannel {
   private static final Logger LOG = LogManager.getLogger();
-
-  private static final String INVALID_BUILDER_URL_LOG_FORMAT =
-      "Ignoring builder with invalid url {} configured for validator {}";
 
   private final ValidatorConfig config;
   private final RuntimeProposerConfig runtimeProposerConfig;
@@ -284,56 +277,48 @@ public class ProposerConfigManager
       return new ResolvedBuilderConfig(minBid, builderBoostFactor, List.of());
     }
 
-    final Optional<Map<String, BuilderOverrides>> maybeProposerConfigBuilders =
+    final Optional<List<BuilderUrl>> maybeProposerConfigBuilders =
         getAttributeWithFallback(
             config ->
-                config.getBuilder().map(BuilderConfig::getUrls).filter(urls -> !urls.isEmpty()),
+                config
+                    .getBuilder()
+                    .map(BuilderConfig::getBuilders)
+                    .filter(builders -> !builders.isEmpty()),
             publicKey);
 
-    final List<ResolvedBuilderEntry> builders;
-    if (maybeProposerConfigBuilders.isEmpty()) {
-      builders =
-          config.getBuilderUrls().stream()
-              .map(
-                  url ->
-                      new ResolvedBuilderEntry(
-                          url,
-                          Optional.empty(),
-                          List.of(),
-                          config.getBuilderMaxExecutionPayment(),
-                          minBid,
-                          builderBoostFactor))
-              .toList();
-    } else {
-      builders = new ArrayList<>();
-      maybeProposerConfigBuilders
-          .get()
-          .forEach(
-              (url, overrides) -> {
-                final URL builderUrl;
-                try {
-                  builderUrl = URI.create(url).toURL();
-                } catch (final MalformedURLException | IllegalArgumentException e) {
-                  LOG.warn(INVALID_BUILDER_URL_LOG_FORMAT, url, publicKey, e);
-                  return;
-                }
-                if (isNullOrEmpty(builderUrl.getHost())) {
-                  LOG.warn(INVALID_BUILDER_URL_LOG_FORMAT, url, publicKey);
-                  return;
-                }
-                builders.add(
-                    new ResolvedBuilderEntry(
-                        builderUrl,
-                        overrides.getAuthData(),
-                        overrides.getBuilderPubkeys().orElse(List.of()),
-                        overrides
-                            .getMaxExecutionPayment()
-                            .orElse(config.getBuilderMaxExecutionPayment()),
-                        overrides.getMinBid().orElse(minBid),
-                        overrides.getBuilderBoostFactor().orElse(builderBoostFactor)));
-              });
-    }
-    return new ResolvedBuilderConfig(minBid, builderBoostFactor, builders);
+    final List<ResolvedBuilderEntry> resolvedBuilders =
+        maybeProposerConfigBuilders
+            .map(
+                builders ->
+                    builders.stream()
+                        .map(
+                            builder -> {
+                              final BuilderOverrides overrides = builder.overrides();
+                              return new ResolvedBuilderEntry(
+                                  builder.url(),
+                                  overrides.getAuthData(),
+                                  overrides.getBuilderPubkeys().orElse(List.of()),
+                                  overrides
+                                      .getMaxExecutionPayment()
+                                      .orElse(config.getBuilderMaxExecutionPayment()),
+                                  overrides.getMinBid().orElse(minBid),
+                                  overrides.getBuilderBoostFactor().orElse(builderBoostFactor));
+                            })
+                        .toList())
+            .orElseGet(
+                () ->
+                    config.getBuilderUrls().stream()
+                        .map(
+                            url ->
+                                new ResolvedBuilderEntry(
+                                    url,
+                                    Optional.empty(),
+                                    List.of(),
+                                    config.getBuilderMaxExecutionPayment(),
+                                    minBid,
+                                    builderBoostFactor))
+                        .toList());
+    return new ResolvedBuilderConfig(minBid, builderBoostFactor, resolvedBuilders);
   }
 
   @Override
