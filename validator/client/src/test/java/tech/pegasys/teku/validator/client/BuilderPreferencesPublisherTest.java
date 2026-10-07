@@ -111,6 +111,7 @@ public class BuilderPreferencesPublisherTest {
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<SszList<BuilderPreferencesEntry>> captor =
         ArgumentCaptor.forClass(SszList.class);
+    verify(proposerConfigPropertiesProvider).refresh();
     verify(validatorApiChannel).sendBuilderPreferences(captor.capture());
     final SszList<BuilderPreferencesEntry> published = captor.getValue();
     assertThat(published).hasSize(1);
