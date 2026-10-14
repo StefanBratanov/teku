@@ -279,12 +279,7 @@ public class ProposerConfigManager
 
     final Optional<List<BuilderUrl>> maybeProposerConfigBuilders =
         getAttributeWithFallback(
-            config ->
-                config
-                    .getBuilder()
-                    .map(BuilderConfig::getBuilders)
-                    .filter(builders -> !builders.isEmpty()),
-            publicKey);
+            config -> config.getBuilder().flatMap(BuilderConfig::getBuilders), publicKey);
 
     final List<ResolvedBuilderEntry> resolvedBuilders =
         maybeProposerConfigBuilders

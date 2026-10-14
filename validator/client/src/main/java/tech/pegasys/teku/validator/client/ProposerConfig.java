@@ -174,7 +174,7 @@ public class ProposerConfig {
     private final Map<String, BuilderOverrides> urls;
 
     // the urls parsed once on creation, in the order they were configured
-    private final List<BuilderUrl> builders;
+    private final Optional<List<BuilderUrl>> builders;
 
     @JsonCreator
     public BuilderConfig(
@@ -190,11 +190,11 @@ public class ProposerConfig {
       this.registrationOverrides = registrationOverrides;
       this.minBid = minBid;
       this.builderBoostFactor = builderBoostFactor;
-      this.urls = urls == null ? ImmutableMap.of() : replaceNullOverrides(urls);
-      this.builders = parseUrls(this.urls);
+      this.urls = urls == null ? null : replaceNullOverrides(urls);
+      this.builders = Optional.ofNullable(this.urls).map(this::parseUrls);
     }
 
-    private static Map<String, BuilderOverrides> replaceNullOverrides(
+    private Map<String, BuilderOverrides> replaceNullOverrides(
         final Map<String, BuilderOverrides> urls) {
       final Map<String, BuilderOverrides> result = new LinkedHashMap<>();
       urls.forEach(
@@ -203,7 +203,7 @@ public class ProposerConfig {
       return Collections.unmodifiableMap(result);
     }
 
-    private static List<BuilderUrl> parseUrls(final Map<String, BuilderOverrides> urls) {
+    private List<BuilderUrl> parseUrls(final Map<String, BuilderOverrides> urls) {
       checkArgument(
           urls.size() <= MAX_BUILDER_ENTRIES,
           "\"urls\" must contain at most %s entries",
@@ -251,12 +251,8 @@ public class ProposerConfig {
       return Optional.ofNullable(builderBoostFactor);
     }
 
-    public Map<String, BuilderOverrides> getUrls() {
-      return urls;
-    }
-
     @JsonIgnore
-    public List<BuilderUrl> getBuilders() {
+    public Optional<List<BuilderUrl>> getBuilders() {
       return builders;
     }
 

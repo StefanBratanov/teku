@@ -398,6 +398,88 @@ public class ProposerConfigManagerTest {
   }
 
   @Test
+  void resolveBuilderConfig_runtimeEmptyBuildersShouldNotFallBackToCliBuilders(
+      @TempDir final Path tempDir) throws IOException {
+    setUpProposerConfigManager(
+        Optional.of(tempDir),
+        Optional.of(
+            String.format(
+                "{\"%s\":{\"builder_config\":{\"builders\":[]}},\"%s\":{\"builder_config\":{\"min_bid\":\"1\"}}}",
+                validatorInRuntimeConfig.getPublicKey(), validatorNotInConfig.getPublicKey())));
+
+    // an empty list means no builders, overriding the CLI builders
+    assertThat(
+            proposerConfigManager
+                .resolveBuilderConfig(validatorInRuntimeConfig.getPublicKey())
+                .builders())
+        .isEmpty();
+    // no builders set, so the CLI builders are used
+    assertThat(
+            proposerConfigManager
+                .resolveBuilderConfig(validatorNotInConfig.getPublicKey())
+                .builders())
+        .extracting(builder -> builder.url().toString())
+        .containsExactly(cliBuilderUrl.toString());
+  }
+
+  @Test
+  void resolveBuilderConfig_proposerConfigEmptyUrlsShouldOverrideOtherBuilders()
+      throws IOException {
+    final String defaultBuilderUrl = "https://default-builder.example.com";
+    // validator specific empty urls override the default config urls
+    when(proposerConfigProvider.getProposerConfig())
+        .thenReturn(
+            SafeFuture.completedFuture(
+                Optional.of(
+                    new ProposerConfig(
+                        Map.of(
+                            validatorInConfig.getPublicKey().toBytesCompressed(),
+                            new ProposerConfig.Config(
+                                null,
+                                new ProposerConfig.BuilderConfig(
+                                    null, null, null, null, null, Map.of()))),
+                        new ProposerConfig.Config(
+                            defaultFeeRecipientConfig,
+                            new ProposerConfig.BuilderConfig(
+                                true,
+                                null,
+                                null,
+                                null,
+                                null,
+                                Map.of(defaultBuilderUrl, BuilderOverrides.EMPTY)))))));
+    setUpProposerConfigManager(Optional.empty(), Optional.empty());
+
+    assertThat(
+            proposerConfigManager.resolveBuilderConfig(validatorInConfig.getPublicKey()).builders())
+        .isEmpty();
+    assertThat(
+            proposerConfigManager
+                .resolveBuilderConfig(validatorNotInConfig.getPublicKey())
+                .builders())
+        .extracting(builder -> builder.url().toString())
+        .containsExactly(defaultBuilderUrl);
+
+    // default config empty urls override the CLI builders
+    when(proposerConfigProvider.getProposerConfig())
+        .thenReturn(
+            SafeFuture.completedFuture(
+                Optional.of(
+                    new ProposerConfig(
+                        Map.of(),
+                        new ProposerConfig.Config(
+                            defaultFeeRecipientConfig,
+                            new ProposerConfig.BuilderConfig(
+                                true, null, null, null, null, Map.of()))))));
+    setUpProposerConfigManager(Optional.empty(), Optional.empty());
+
+    assertThat(
+            proposerConfigManager
+                .resolveBuilderConfig(validatorNotInConfig.getPublicKey())
+                .builders())
+        .isEmpty();
+  }
+
+  @Test
   void getFeeRecipient_shouldReturnCliDefaultIfNotPresentInConfigOrRuntime() throws IOException {
     setUpWithNoConfigs(false);
 

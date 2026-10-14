@@ -15,7 +15,6 @@ package tech.pegasys.teku.validator.client.proposerconfig.loader;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.entry;
 import static tech.pegasys.teku.spec.config.SpecConfigGloas.MAX_BUILDER_AUTH_DATA_SIZE;
 import static tech.pegasys.teku.spec.datastructures.builder.versions.gloas.BuilderConfigSchema.MAX_BUILDER_ENTRIES;
 import static tech.pegasys.teku.spec.schemas.ApiSchemas.MAX_BUILDER_PUBKEYS;
@@ -40,6 +39,7 @@ import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 import tech.pegasys.teku.validator.client.ProposerConfig;
 import tech.pegasys.teku.validator.client.ProposerConfig.BuilderConfig;
 import tech.pegasys.teku.validator.client.ProposerConfig.BuilderOverrides;
+import tech.pegasys.teku.validator.client.ProposerConfig.BuilderUrl;
 import tech.pegasys.teku.validator.client.ProposerConfig.Config;
 import tech.pegasys.teku.validator.client.ProposerConfig.RegistrationOverrides;
 
@@ -173,18 +173,40 @@ public class ProposerConfigLoaderTest {
   }
 
   @Test
+  void shouldLoadEmptyUrlsAsNoBuilders() {
+    final URL resource = Resources.getResource("proposerConfigWithUrlsValid5.json");
+
+    final ProposerConfig config = loader.getProposerConfig(resource);
+
+    // empty urls are kept, meaning no builders, rather than being treated as not set
+    assertThat(
+            config
+                .getConfigForPubKey(
+                    "0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+                .flatMap(Config::getBuilder)
+                .flatMap(BuilderConfig::getBuilders))
+        .hasValue(List.of());
+    // no urls configured at all
+    assertThat(config.getDefaultConfig().getBuilder().flatMap(BuilderConfig::getBuilders))
+        .isEmpty();
+  }
+
+  @Test
   void shouldLoadNullUrlOverridesAsEmpty() {
     final URL resource = Resources.getResource("proposerConfigWithUrlsValid4.json");
 
-    final Map<String, BuilderOverrides> urls =
+    final List<BuilderUrl> builders =
         loader
             .getProposerConfig(resource)
             .getConfigForPubKey(
                 "0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
             .flatMap(Config::getBuilder)
-            .map(BuilderConfig::getUrls)
+            .flatMap(BuilderConfig::getBuilders)
             .orElseThrow();
-    assertThat(urls).containsExactly(entry("https://builder.example.com", BuilderOverrides.EMPTY));
+    assertThat(builders)
+        .extracting(builder -> builder.url().toString())
+        .containsExactly("https://builder.example.com");
+    assertThat(builders.getFirst().overrides()).isEqualTo(BuilderOverrides.EMPTY);
   }
 
   @Test
@@ -410,16 +432,16 @@ public class ProposerConfigLoaderTest {
     assertThat(validatorConfigBuilder.getMinBid()).hasValue(UInt64.valueOf(1_000_000_000L));
     assertThat(validatorConfigBuilder.getBuilderBoostFactor()).hasValue(UInt64.valueOf(90));
 
-    final Map<String, BuilderOverrides> urls = validatorConfigBuilder.getUrls();
-    assertThat(urls).hasSize(2);
+    final List<BuilderUrl> builders = validatorConfigBuilder.getBuilders().orElseThrow();
+    assertThat(builders)
+        .extracting(builder -> builder.url().toString())
+        .containsExactly("https://builder-a.example.com", "https://builder-b.example.com");
 
-    final BuilderOverrides builderOverridesA = urls.get("https://builder-a.example.com");
-    assertThat(builderOverridesA).isNotNull();
+    final BuilderOverrides builderOverridesA = builders.getFirst().overrides();
     assertThat(builderOverridesA.getMinBid()).hasValue(UInt64.valueOf(2_000_000_000L));
     assertThat(builderOverridesA.getBuilderBoostFactor()).hasValue(UInt64.valueOf(110));
 
-    final BuilderOverrides builderOverridesB = urls.get("https://builder-b.example.com");
-    assertThat(builderOverridesB).isNotNull();
+    final BuilderOverrides builderOverridesB = builders.get(1).overrides();
     assertThat(builderOverridesB.getMinBid()).isEmpty();
     assertThat(builderOverridesB.getBuilderBoostFactor()).hasValue(UInt64.valueOf(80));
 
@@ -432,7 +454,7 @@ public class ProposerConfigLoaderTest {
     assertThat(defaultBuilder.getGasLimit()).hasValue(UInt64.valueOf(30_000_000L));
     assertThat(defaultBuilder.getMinBid()).hasValue(UInt64.valueOf(500_000_000L));
     assertThat(defaultBuilder.getBuilderBoostFactor()).hasValue(UInt64.valueOf(100));
-    assertThat(defaultBuilder.getUrls()).isEmpty();
+    assertThat(defaultBuilder.getBuilders()).isEmpty();
   }
 
   private void validateContentWithUrlsValid2(final ProposerConfig config) {
@@ -449,7 +471,7 @@ public class ProposerConfigLoaderTest {
     assertThat(validatorConfigBuilder.isEnabled()).hasValue(true);
     assertThat(validatorConfigBuilder.getMinBid()).hasValue(UInt64.valueOf(1_000_000_000L));
     assertThat(validatorConfigBuilder.getBuilderBoostFactor()).hasValue(UInt64.valueOf(90));
-    assertThat(validatorConfigBuilder.getUrls()).isEmpty();
+    assertThat(validatorConfigBuilder.getBuilders()).isEmpty();
 
     final Config defaultConfig = config.getDefaultConfig();
     assertThat(defaultConfig.getFeeRecipient())
@@ -459,21 +481,22 @@ public class ProposerConfigLoaderTest {
     assertThat(defaultBuilder.isEnabled()).hasValue(true);
     assertThat(defaultBuilder.getMinBid()).hasValue(UInt64.valueOf(500_000_000L));
     assertThat(defaultBuilder.getBuilderBoostFactor()).hasValue(UInt64.valueOf(100));
-    assertThat(defaultBuilder.getUrls()).isEmpty();
+    assertThat(defaultBuilder.getBuilders()).isEmpty();
   }
 
   private void validateContentWithUrlsValid3(final ProposerConfig config) {
-    final Map<String, BuilderOverrides> urls =
+    final List<BuilderUrl> builders =
         config
             .getConfigForPubKey(
                 "0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
             .flatMap(Config::getBuilder)
-            .map(BuilderConfig::getUrls)
+            .flatMap(BuilderConfig::getBuilders)
             .orElseThrow();
-    assertThat(urls).hasSize(2);
+    assertThat(builders)
+        .extracting(builder -> builder.url().toString())
+        .containsExactly("https://builder-a.example.com", "https://builder-b.example.com");
 
-    final BuilderOverrides builderOverridesA = urls.get("https://builder-a.example.com");
-    assertThat(builderOverridesA).isNotNull();
+    final BuilderOverrides builderOverridesA = builders.getFirst().overrides();
     assertThat(builderOverridesA.getAuthData())
         .hasValue(
             Bytes.fromHexString("0x68747470733a2f2f6275696c6465722d612e6578616d706c652e636f6d"));
@@ -488,8 +511,7 @@ public class ProposerConfigLoaderTest {
     assertThat(builderOverridesA.getBuilderBoostFactor()).hasValue(UInt64.valueOf(110));
     assertThat(builderOverridesA.getMaxExecutionPayment()).hasValue(UInt64.valueOf(250_000_000L));
 
-    final BuilderOverrides builderOverridesB = urls.get("https://builder-b.example.com");
-    assertThat(builderOverridesB).isNotNull();
+    final BuilderOverrides builderOverridesB = builders.get(1).overrides();
     assertThat(builderOverridesB.getAuthData()).isEmpty();
     assertThat(builderOverridesB.getBuilderPubkeys()).isEmpty();
     assertThat(builderOverridesB.getMinBid()).isEmpty();
