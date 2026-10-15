@@ -276,11 +276,14 @@ public class ProposerConfigManager
       return new ResolvedBuilderConfig(minBid, builderBoostFactor, List.of());
     }
 
-    final Optional<BuilderConfig> maybeProposerConfigBuilderConfig =
-        getAttributeWithFallback(Config::getBuilder, publicKey);
+    final Optional<BuilderConfig> maybeProposerConfigBuilderWithUrls =
+        getAttributeWithFallback(
+            config ->
+                config.getBuilder().filter(builderConfig -> builderConfig.getUrls().isPresent()),
+            publicKey);
 
     final List<ResolvedBuilderEntry> resolvedBuilders =
-        maybeProposerConfigBuilderConfig
+        maybeProposerConfigBuilderWithUrls
             .flatMap(
                 builderConfig -> {
                   final Optional<Map<String, BuilderOverrides>> builderUrls =
