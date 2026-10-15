@@ -32,7 +32,6 @@ import tech.pegasys.teku.validator.api.ValidatorConfig;
 import tech.pegasys.teku.validator.api.ValidatorTimingChannel;
 import tech.pegasys.teku.validator.client.ProposerConfig.BuilderConfig;
 import tech.pegasys.teku.validator.client.ProposerConfig.BuilderOverrides;
-import tech.pegasys.teku.validator.client.ProposerConfig.BuilderUrl;
 import tech.pegasys.teku.validator.client.ProposerConfig.Config;
 import tech.pegasys.teku.validator.client.ProposerConfig.RegistrationOverrides;
 import tech.pegasys.teku.validator.client.ResolvedBuilderConfig.ResolvedBuilderEntry;
@@ -277,29 +276,37 @@ public class ProposerConfigManager
       return new ResolvedBuilderConfig(minBid, builderBoostFactor, List.of());
     }
 
-    final Optional<List<BuilderUrl>> maybeProposerConfigBuilders =
-        getAttributeWithFallback(
-            config -> config.getBuilder().flatMap(BuilderConfig::getBuilders), publicKey);
+    final Optional<BuilderConfig> maybeProposerConfigBuilderConfig =
+        getAttributeWithFallback(Config::getBuilder, publicKey);
 
     final List<ResolvedBuilderEntry> resolvedBuilders =
-        maybeProposerConfigBuilders
-            .map(
-                builders ->
-                    builders.stream()
-                        .map(
-                            builder -> {
-                              final BuilderOverrides overrides = builder.overrides();
-                              return new ResolvedBuilderEntry(
-                                  builder.url(),
-                                  overrides.getAuthData(),
-                                  overrides.getBuilderPubkeys().orElse(List.of()),
-                                  overrides
-                                      .getMaxExecutionPayment()
-                                      .orElse(config.getBuilderMaxExecutionPayment()),
-                                  overrides.getMinBid().orElse(minBid),
-                                  overrides.getBuilderBoostFactor().orElse(builderBoostFactor));
-                            })
-                        .toList())
+        maybeProposerConfigBuilderConfig
+            .flatMap(
+                builderConfig -> {
+                  final Optional<Map<String, BuilderOverrides>> builderUrls =
+                      builderConfig.getUrls();
+                  if (builderUrls.isEmpty()) {
+                    return Optional.empty();
+                  }
+                  List<ResolvedBuilderEntry> builders =
+                      builderUrls.get().entrySet().stream()
+                          .map(
+                              builder -> {
+                                final String url = builder.getKey();
+                                final BuilderOverrides overrides = builder.getValue();
+                                return new ResolvedBuilderEntry(
+                                    builderConfig.getParsedUrl(url),
+                                    overrides.getAuthData(),
+                                    overrides.getBuilderPubkeys().orElse(List.of()),
+                                    overrides
+                                        .getMaxExecutionPayment()
+                                        .orElse(config.getBuilderMaxExecutionPayment()),
+                                    overrides.getMinBid().orElse(minBid),
+                                    overrides.getBuilderBoostFactor().orElse(builderBoostFactor));
+                              })
+                          .toList();
+                  return Optional.of(builders);
+                })
             .orElseGet(
                 () ->
                     config.getBuilderUrls().stream()
