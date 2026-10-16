@@ -231,7 +231,7 @@ public class ProposerConfigLoaderTest {
     assertThatThrownBy(() -> loader.getProposerConfig(resource))
         .hasRootCauseInstanceOf(IllegalArgumentException.class)
         .hasRootCauseMessage(
-            "builder url must be between 1 and " + MAX_BUILDER_URL_SIZE + " characters");
+            "builder url must be between 1 and " + MAX_BUILDER_URL_SIZE + " UTF-8 bytes");
   }
 
   @Test
