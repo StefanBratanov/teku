@@ -21,7 +21,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-
 import tech.pegasys.teku.infrastructure.exceptions.InvalidConfigurationException;
 
 public class BuilderUrlParser {
