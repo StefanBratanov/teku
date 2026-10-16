@@ -20,14 +20,18 @@ import static tech.pegasys.teku.spec.schemas.ApiSchemas.MAX_BUILDER_URL_SIZE;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+
 import tech.pegasys.teku.infrastructure.exceptions.InvalidConfigurationException;
 
 public class BuilderUrlParser {
 
   public static URL parseBuilderUrl(final String builderUrl) {
     checkArgument(
-        builderUrl != null && !builderUrl.isEmpty() && builderUrl.length() <= MAX_BUILDER_URL_SIZE,
-        "builder url must be between 1 and %s characters",
+        builderUrl != null
+            && !builderUrl.isEmpty()
+            && builderUrl.getBytes(StandardCharsets.UTF_8).length <= MAX_BUILDER_URL_SIZE,
+        "builder url must have between between 1 and %s UTF-8 bytes",
         MAX_BUILDER_URL_SIZE);
     try {
       final URL parsedBuilderUrl = URI.create(builderUrl).toURL();

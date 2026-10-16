@@ -23,6 +23,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
 import tech.pegasys.teku.bls.BLSPublicKey;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
@@ -39,6 +42,8 @@ import tech.pegasys.teku.spec.schemas.ApiSchemas;
 import tech.pegasys.teku.validator.api.ValidatorTimingChannel;
 
 public class DefaultBuilderConfigProvider implements BuilderConfigProvider, ValidatorTimingChannel {
+
+  private static final Logger LOG = LogManager.getLogger();
 
   // Builder preferences are sent one epoch before the proposal slot, so the BuilderConfig is
   // computed ahead of time. Pruned on each slot; entries older than 2 epochs are discarded.
@@ -112,9 +117,17 @@ public class DefaultBuilderConfigProvider implements BuilderConfigProvider, Vali
                                 builder.maxExecutionPayment(),
                                 builder.minBid(),
                                 builder.builderBoostFactor());
-                          });
+                          })
+                      // In case of unexpected exceptions, we filter them out and log it instead, so
+                      // block production doesn't fail
+                      .whenException(
+                          ex ->
+                              LOG.warn(
+                                  "Exception occurred while creating builder entry for {}",
+                                  builder.url().toString(),
+                                  ex));
                 });
-    return SafeFuture.collectAll(builderEntriesFutures)
+    return SafeFuture.collectAllSuccessful(builderEntriesFutures)
         .thenApply(
             builderEntries -> {
               final BuilderConfig builderConfig =
