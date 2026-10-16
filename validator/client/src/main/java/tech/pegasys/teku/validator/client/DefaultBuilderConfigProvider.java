@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
@@ -118,8 +117,7 @@ public class DefaultBuilderConfigProvider implements BuilderConfigProvider, Vali
                                 builder.minBid(),
                                 builder.builderBoostFactor());
                           })
-                      // In case of unexpected exceptions, we filter them out and log it instead, so
-                      // block production doesn't fail
+                      // In case of unexpected exceptions, we filter them out and log it instead
                       .whenException(
                           ex ->
                               LOG.warn(
