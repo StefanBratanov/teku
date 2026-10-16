@@ -30,7 +30,7 @@ public class BuilderUrlParser {
         builderUrl != null
             && !builderUrl.isEmpty()
             && builderUrl.getBytes(StandardCharsets.UTF_8).length <= MAX_BUILDER_URL_SIZE,
-        "builder url must have between between 1 and %s UTF-8 bytes",
+        "builder url must be between 1 and %s UTF-8 bytes",
         MAX_BUILDER_URL_SIZE);
     try {
       final URL parsedBuilderUrl = URI.create(builderUrl).toURL();
