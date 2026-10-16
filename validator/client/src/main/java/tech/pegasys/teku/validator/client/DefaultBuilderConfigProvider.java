@@ -39,6 +39,7 @@ import tech.pegasys.teku.spec.datastructures.builder.versions.gloas.BuilderReque
 import tech.pegasys.teku.spec.datastructures.builder.versions.gloas.SignedBuilderRequestAuth;
 import tech.pegasys.teku.spec.schemas.ApiSchemas;
 import tech.pegasys.teku.validator.api.ValidatorTimingChannel;
+import tech.pegasys.teku.validator.client.ResolvedBuilderConfig.ResolvedBuilderEntry;
 
 public class DefaultBuilderConfigProvider implements BuilderConfigProvider, ValidatorTimingChannel {
 
@@ -95,36 +96,25 @@ public class DefaultBuilderConfigProvider implements BuilderConfigProvider, Vali
     final Stream<SafeFuture<BuilderEntry>> builderEntriesFutures =
         resolvedBuilderConfig.builders().stream()
             .map(
-                builder -> {
-                  final Bytes authData =
-                      builder.authData().orElseGet(() -> getAuthData(builder.url()));
-                  final BuilderRequestAuth auth =
-                      ApiSchemas.BUILDER_REQUEST_AUTH_SCHEMA.create(authData, slot);
-                  // Authenticates bid requests to the builder
-                  return validator
-                      .getSigner()
-                      .signBuilderRequestAuth(auth)
-                      .thenApply(
-                          signature -> {
-                            final SignedBuilderRequestAuth signedAuth =
-                                ApiSchemas.SIGNED_BUILDER_REQUEST_AUTH_SCHEMA.create(
-                                    auth, signature);
-                            return ApiSchemas.BUILDER_ENTRY_SCHEMA.create(
-                                Bytes.of(builder.url().toString().getBytes(StandardCharsets.UTF_8)),
-                                signedAuth,
-                                builder.builderPubkeys(),
-                                builder.maxExecutionPayment(),
-                                builder.minBid(),
-                                builder.builderBoostFactor());
-                          })
-                      // In case of unexpected exceptions, we filter them out and log it instead
-                      .whenException(
-                          ex ->
-                              LOG.warn(
-                                  "Exception occurred while creating builder entry for {}",
-                                  builder.url().toString(),
-                                  ex));
-                });
+                builder ->
+                    getSignedAuthData(builder, validator, slot)
+                        .thenApply(
+                            signedAuth ->
+                                ApiSchemas.BUILDER_ENTRY_SCHEMA.create(
+                                    Bytes.of(
+                                        builder.url().toString().getBytes(StandardCharsets.UTF_8)),
+                                    signedAuth,
+                                    builder.builderPubkeys(),
+                                    builder.maxExecutionPayment(),
+                                    builder.minBid(),
+                                    builder.builderBoostFactor()))
+                        // In case of unexpected exceptions, we filter them out and log it instead
+                        .whenException(
+                            ex ->
+                                LOG.warn(
+                                    "Exception occurred while creating builder entry for {}",
+                                    builder.url().toString(),
+                                    ex)));
     return SafeFuture.collectAllSuccessful(builderEntriesFutures)
         .thenApply(
             builderEntries -> {
@@ -140,6 +130,23 @@ public class DefaultBuilderConfigProvider implements BuilderConfigProvider, Vali
 
   private boolean isBuilderConfigRequired(final UInt64 slot) {
     return spec.atSlot(slot).getMilestone().isGreaterThanOrEqualTo(SpecMilestone.GLOAS);
+  }
+
+  // Authenticates bid requests to the builder
+  private SafeFuture<SignedBuilderRequestAuth> getSignedAuthData(
+      final ResolvedBuilderEntry builder, final Validator validator, final UInt64 slot) {
+    return SafeFuture.of(
+        () -> {
+          final Bytes authData = builder.authData().orElseGet(() -> getAuthData(builder.url()));
+          final BuilderRequestAuth auth =
+              ApiSchemas.BUILDER_REQUEST_AUTH_SCHEMA.create(authData, slot);
+          return validator
+              .getSigner()
+              .signBuilderRequestAuth(auth)
+              .thenApply(
+                  signature ->
+                      ApiSchemas.SIGNED_BUILDER_REQUEST_AUTH_SCHEMA.create(auth, signature));
+        });
   }
 
   private Bytes getAuthData(final URL builderUrl) {

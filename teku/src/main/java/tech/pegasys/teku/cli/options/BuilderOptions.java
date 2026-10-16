@@ -13,12 +13,15 @@
 
 package tech.pegasys.teku.cli.options;
 
+import static tech.pegasys.teku.spec.datastructures.builder.versions.gloas.BuilderConfigSchema.MAX_BUILDER_ENTRIES;
+
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import picocli.CommandLine;
 import tech.pegasys.teku.cli.converter.UInt64Converter;
 import tech.pegasys.teku.config.TekuConfiguration;
+import tech.pegasys.teku.infrastructure.exceptions.InvalidConfigurationException;
 import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 import tech.pegasys.teku.validator.api.ValidatorConfig;
 import tech.pegasys.teku.validator.client.BuilderUrlParser;
@@ -89,6 +92,12 @@ public class BuilderOptions {
   }
 
   private List<URL> parseBuilderUrls() {
+    if (builderUrls.size() > MAX_BUILDER_ENTRIES) {
+      throw new InvalidConfigurationException(
+          String.format(
+              "Invalid configuration. Builders must be at most %s but are %s",
+              MAX_BUILDER_ENTRIES, builderUrls.size()));
+    }
     return builderUrls.stream().map(BuilderUrlParser::parseBuilderUrl).toList();
   }
 }

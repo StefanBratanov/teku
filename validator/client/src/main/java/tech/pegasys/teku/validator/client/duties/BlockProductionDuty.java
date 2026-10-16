@@ -146,8 +146,7 @@ public class BlockProductionDuty implements Duty {
 
   private SafeFuture<Optional<BuilderConfig>> createBuilderConfig(
       final Validator validator, final UInt64 slot) {
-    return builderConfigProvider
-        .getBuilderConfig(validator, slot)
+    return SafeFuture.of(() -> builderConfigProvider.getBuilderConfig(validator, slot))
         // This should never happen realistically, but would rather proceed with a non-biased
         // builder config than fail block production
         .exceptionally(

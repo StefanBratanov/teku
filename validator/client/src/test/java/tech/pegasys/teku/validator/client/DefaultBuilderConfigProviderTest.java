@@ -38,6 +38,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import tech.pegasys.teku.bls.BLSPublicKey;
 import tech.pegasys.teku.bls.BLSSignature;
+import tech.pegasys.teku.infrastructure.async.SafeFuture;
 import tech.pegasys.teku.infrastructure.unsigned.UInt64;
 import tech.pegasys.teku.spec.Spec;
 import tech.pegasys.teku.spec.TestSpecFactory;
@@ -175,6 +176,45 @@ class DefaultBuilderConfigProviderTest {
 
     assertThat(result).isPresent();
     assertThat(result.get().getBuilders().get(0).getAuth().getMessage()).isEqualTo(expectedAuth);
+  }
+
+  @Test
+  void shouldDropBuilderWhichFailsAndKeepTheRest() throws MalformedURLException {
+    final Bytes failingAuthData = Bytes.fromHexString("0x01");
+    final Bytes authData = Bytes.fromHexString("0x02");
+    when(proposerConfigPropertiesProvider.resolveBuilderConfig(validator.getPublicKey()))
+        .thenReturn(
+            new ResolvedBuilderConfig(
+                UInt64.ZERO,
+                UInt64.valueOf(100),
+                List.of(
+                    new ResolvedBuilderEntry(
+                        URI.create("https://failing-builder.example.com").toURL(),
+                        Optional.of(failingAuthData),
+                        List.of(),
+                        UInt64.ZERO,
+                        UInt64.ZERO,
+                        UInt64.valueOf(100)),
+                    new ResolvedBuilderEntry(
+                        URI.create(BUILDER_URL).toURL(),
+                        Optional.of(authData),
+                        List.of(),
+                        UInt64.ZERO,
+                        UInt64.ZERO,
+                        UInt64.valueOf(100)))));
+    when(signer.signBuilderRequestAuth(
+            ApiSchemas.BUILDER_REQUEST_AUTH_SCHEMA.create(failingAuthData, SLOT)))
+        .thenReturn(SafeFuture.failedFuture(new IllegalStateException("signing failed")));
+    when(signer.signBuilderRequestAuth(
+            ApiSchemas.BUILDER_REQUEST_AUTH_SCHEMA.create(authData, SLOT)))
+        .thenReturn(completedFuture(dataStructureUtil.randomSignature()));
+
+    final Optional<BuilderConfig> result = provider.getBuilderConfig(validator, SLOT).join();
+
+    assertThat(result).isPresent();
+    assertThat(result.get().getBuilders())
+        .extracting(BuilderEntry::getUrl)
+        .containsExactly(BUILDER_URL);
   }
 
   @Test

@@ -480,6 +480,60 @@ public class ProposerConfigManagerTest {
   }
 
   @Test
+  void resolveBuilderConfig_shouldReturnNoBuildersWhenDisabled() throws IOException {
+    final ProposerConfig proposerConfig =
+        new ProposerConfig(
+            Map.of(
+                validatorInConfig.getPublicKey().toBytesCompressed(),
+                new ProposerConfig.Config(
+                    null,
+                    new ProposerConfig.BuilderConfig(
+                        false,
+                        null,
+                        null,
+                        null,
+                        null,
+                        Map.of(BUILDER_URL, new BuilderOverrides(null, null, null, null, null))))),
+            new ProposerConfig.Config(defaultFeeRecipientConfig, null));
+    when(proposerConfigProvider.getProposerConfig())
+        .thenReturn(SafeFuture.completedFuture(Optional.of(proposerConfig)));
+    setUpProposerConfigManager(Optional.empty(), Optional.empty());
+
+    assertThat(
+            proposerConfigManager.resolveBuilderConfig(validatorInConfig.getPublicKey()).builders())
+        .isEmpty();
+  }
+
+  @Test
+  void resolveBuilderConfig_builderWithoutUrlsShouldUseDefaultConfigUrls() throws IOException {
+    final ProposerConfig proposerConfig =
+        new ProposerConfig(
+            Map.of(
+                validatorInConfig.getPublicKey().toBytesCompressed(),
+                new ProposerConfig.Config(
+                    null,
+                    new ProposerConfig.BuilderConfig(
+                        null, validatorGasLimitConfig, null, null, null, null))),
+            new ProposerConfig.Config(
+                defaultFeeRecipientConfig,
+                new ProposerConfig.BuilderConfig(
+                    true,
+                    null,
+                    null,
+                    null,
+                    null,
+                    Map.of(BUILDER_URL, new BuilderOverrides(null, null, null, null, null)))));
+    when(proposerConfigProvider.getProposerConfig())
+        .thenReturn(SafeFuture.completedFuture(Optional.of(proposerConfig)));
+    setUpProposerConfigManager(Optional.empty(), Optional.empty());
+
+    assertThat(
+            proposerConfigManager.resolveBuilderConfig(validatorInConfig.getPublicKey()).builders())
+        .extracting(builder -> builder.url().toString())
+        .containsExactly(BUILDER_URL);
+  }
+
+  @Test
   void getFeeRecipient_shouldReturnCliDefaultIfNotPresentInConfigOrRuntime() throws IOException {
     setUpWithNoConfigs(false);
 

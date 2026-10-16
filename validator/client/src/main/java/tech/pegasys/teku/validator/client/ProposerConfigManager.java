@@ -284,31 +284,26 @@ public class ProposerConfigManager
 
     final List<ResolvedBuilderEntry> resolvedBuilders =
         maybeProposerConfigBuilderWithUrls
-            .flatMap(
+            .map(
                 builderConfig -> {
-                  final Optional<Map<String, BuilderOverrides>> builderUrls =
-                      builderConfig.getUrls();
-                  if (builderUrls.isEmpty()) {
-                    return Optional.empty();
-                  }
-                  List<ResolvedBuilderEntry> builders =
-                      builderUrls.get().entrySet().stream()
-                          .map(
-                              builder -> {
-                                final String url = builder.getKey();
-                                final BuilderOverrides overrides = builder.getValue();
-                                return new ResolvedBuilderEntry(
-                                    builderConfig.getParsedUrl(url),
-                                    overrides.getAuthData(),
-                                    overrides.getBuilderPubkeys().orElse(List.of()),
-                                    overrides
-                                        .getMaxExecutionPayment()
-                                        .orElse(config.getBuilderMaxExecutionPayment()),
-                                    overrides.getMinBid().orElse(minBid),
-                                    overrides.getBuilderBoostFactor().orElse(builderBoostFactor));
-                              })
-                          .toList();
-                  return Optional.of(builders);
+                  final Map<String, BuilderOverrides> builderUrls =
+                      builderConfig.getUrls().orElseThrow();
+                  return builderUrls.entrySet().stream()
+                      .map(
+                          builder -> {
+                            final String url = builder.getKey();
+                            final BuilderOverrides overrides = builder.getValue();
+                            return new ResolvedBuilderEntry(
+                                builderConfig.getParsedUrl(url),
+                                overrides.getAuthData(),
+                                overrides.getBuilderPubkeys().orElse(List.of()),
+                                overrides
+                                    .getMaxExecutionPayment()
+                                    .orElse(config.getBuilderMaxExecutionPayment()),
+                                overrides.getMinBid().orElse(minBid),
+                                overrides.getBuilderBoostFactor().orElse(builderBoostFactor));
+                          })
+                      .toList();
                 })
             .orElseGet(
                 () ->

@@ -236,7 +236,7 @@ public class ProposerConfig {
 
     @JsonIgnore
     public URL getParsedUrl(final String url) {
-      return parsedUrls.getOrDefault(url, BuilderUrlParser.parseBuilderUrl(url));
+      return parsedUrls.get(url);
     }
 
     @Override
